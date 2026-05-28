@@ -1,0 +1,4 @@
+interface:
+  display_name: "Bad Smell Review"
+  short_description: "Deep refactoring-smell code review guidance"
+  default_prompt: "Use $bad-smell-skill to review this repository for refactoring bad smells and produce a structured report plus a remediation backlog."
