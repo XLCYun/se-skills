@@ -1,5 +1,5 @@
 ---
-name: bad-smell-skill
+name: bad-smells-skill
 description: Deep code review skill for identifying design problems and maintainability risks through the refactoring bad-smells lens. Use when Codex needs to review a repository, subsystem, or change set for poor design, hidden coupling, duplication, oversized functions or classes, speculative abstractions, data clumps, message chains, or other refactoring smells, and produce a structured review report plus a severity-ranked remediation backlog.
 ---
 
