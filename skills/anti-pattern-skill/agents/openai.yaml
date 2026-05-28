@@ -1,0 +1,4 @@
+interface:
+  display_name: "Anti-Pattern Review"
+  short_description: "Review software and project anti-patterns"
+  default_prompt: "Use $anti-pattern-skill to review this repository, subsystem, or project approach for anti-patterns and produce a structured report plus a remediation backlog."
