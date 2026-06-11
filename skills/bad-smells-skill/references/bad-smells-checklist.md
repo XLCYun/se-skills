@@ -1,297 +1,292 @@
-# Refactoring Bad Smells Checklist
-
-Use this checklist as a thinking aid, not a scoring sheet. Report only smells backed by repository evidence.
-
-## 1. Mysterious Name
-
-Review prompts:
-- Are variables, functions, classes, and fields self-explanatory?
-- Are there single-letter names, opaque abbreviations, pinyin shorthands, or overloaded terms that hide intent?
-
-Refactoring directions:
-- Change Function Declaration
-- Rename Variable
-- Rename Field
-
-## 2. Duplicated Code
-
-Review prompts:
-- Do two or more areas share nearly identical control flow, branching, or transformation logic?
-- Would extracting shared behavior reduce duplication without injecting dangerous hidden coupling into critical modules?
-
-Refactoring directions:
-- Extract Function
-- Slide Statements
-- Pull Up Method
-
-## 3. Long Function
-
-Review prompts:
-- Does the function have one job?
-- Does it contain deep branching, nested loops, or multiple non-core responsibilities?
-- Is the control flow hard to summarize in one sentence?
+# 代码异味检查清单
+
+## 1. 神秘命名
+
+审查提示：
+- 变量、函数、类和字段是否见名知意？
+- 是否存在单字母命名、不透明缩写、拼音缩写，或一词多义掩盖真实意图？
+
+重构方向：重命名为更清晰的名字
+
+## 2. 重复代码
+
+审查提示：
+- 两处或更多区域是否共享几乎相同的控制流、分支或转换逻辑？
+- 抽取共享行为是否能减少重复，同时又不会把危险的隐藏耦合注入关键模块？
+
+重构方向：
+- 抽取函数
+- 移动语句
+- 上移方法
 
-Refactoring directions:
-- Extract Function
-- Replace Temp with Query
-- Introduce Parameter Object
-- Preserve Whole Object
-- Decompose Conditional
-- Replace Conditional with Polymorphism
-- Split Loop
-
-## 4. Long Parameter List
+## 3. 过长函数
+
+审查提示：
+- 这个函数是否只有一个职责？
+- 是否存在深层分支、嵌套循环，或多个非核心职责混在一起？
+- 它的控制流是否很难用一句话概括？
 
-Review prompts:
-- Does the function take more information than a caller can comfortably reason about?
-- Do several parameters always travel together?
-- Are flag arguments being used to switch behavior?
+重构方向：
+- 抽取函数
+- 使用查询函数来消除临时变量
+- 引入参数对象
+- 直接传递整个对象
+- 分解条件逻辑
+- 以多态取代条件分支
+- 拆分循环
 
-Refactoring directions:
-- Replace Parameter with Query
-- Preserve Whole Object
-- Introduce Parameter Object
-- Remove Flag Argument
-- Combine Functions into Class
+## 4. 过长参数列表
 
-## 5. Global Data
+审查提示：
+- 函数是否接收了超出调用方可轻松推理的信息量？
+- 是否有若干参数总是一起传来传去？
+- 是否在用 flag 参数切换行为？
 
-Review prompts:
-- Is state globally reachable and mutable from many places?
-- Are public static variables or singleton state used as shared scratch space?
+重构方向：
+- 以查询取代参数
+- 直接传递整个对象
+- 引入参数对象
+- 移除 flag 参数
+- 将相关函数组合成类
 
-Refactoring directions:
-- Encapsulate Variable
+## 5. 全局数据
 
-## 6. Mutable Data
+审查提示：
+- 状态是否可被许多位置全局访问并随意修改？
+- 是否把公共静态变量或单例状态当作共享临时空间？
 
-Review prompts:
-- Is state exposed with more write access than necessary?
-- Do multiple side-effecting paths mutate the same data?
-- Is it hard to know where a value changed?
+重构方向：
+- 封装变量
 
-Refactoring directions:
-- Encapsulate Variable
-- Split Variable
-- Slide Statements
-- Extract Function
-- Separate Query from Modifier
-- Remove Setting Method
-- Replace Temp with Query
-- Combine Functions into Class
+## 6. 可变数据
 
-## 7. Divergent Change
+审查提示：
+- 某些状态是否暴露了超过必要范围的写权限？
+- 是否有多条带副作用的路径在修改同一份数据？
+- 是否很难知道某个值究竟在哪里被改掉了？
 
-Review prompts:
-- Does one module change for many unrelated reasons?
-- Do domain rules, formatting, persistence, and transport concerns accumulate in the same place?
+重构方向：
+- 封装变量
+- 拆分变量
+- 移动语句
+- 抽取函数
+- 分离查询与修改
+- 移除设值方法
+- 使用查询函数来消除临时变量
+- 将相关函数组合成类
 
-Refactoring directions:
-- Split Phase
-- Move Method
-- Extract Function
-- Extract Class
+## 7. 发散式变化
 
-## 8. Shotgun Surgery
+审查提示：
+- 一个模块是否会因为很多彼此无关的原因而变化？
+- 领域规则、格式化、持久化和传输关注点是否都堆积在同一个地方？
 
-Review prompts:
-- Does one feature or policy change require small edits in many files?
-- Is behavior spread thinly across modules with weak cohesion?
+重构方向：
+- 拆分阶段
+- 移动方法
+- 抽取函数
+- 抽取类
 
-Refactoring directions:
-- Move Method
-- Move Field
-- Combine Functions into Class
-- Combine Functions into Transform
-- Split Phase
-- Inline Function
-- Inline Class
+## 8. 霰弹式修改
 
-## 9. Feature Envy
+审查提示：
+- 一个功能或策略变化是否需要在许多文件里做零碎修改？
+- 行为是否被稀薄地分散在多个低内聚模块中？
 
-Review prompts:
-- Does a function interact more with another object or module than with its own home?
-- Is it mostly reading foreign data and applying logic from afar?
+重构方向：
+- 移动方法
+- 移动字段
+- 将相关函数组合成类
+- 把分散的计算集中为一次转换
+- 拆分阶段
+- 内联函数
+- 内联类
 
-Refactoring directions:
-- Move Method
-- Extract Function
+## 9. 依恋情结
 
-## 10. Data Clumps
+审查提示：
+- 某个函数是否与另一个对象或模块交互得比与自己“家里人”还多？
+- 它是否主要是在读取外部数据，然后远距离施加逻辑？
 
-Review prompts:
-- Do the same 3-4 fields or parameters appear together repeatedly?
-- Do they represent a stable concept that deserves its own object?
+重构方向：
+- 移动方法
+- 抽取函数
 
-Refactoring directions:
-- Extract Class
-- Introduce Parameter Object
-- Preserve Whole Object
+## 10. 数据泥团
 
-## 11. Primitive Obsession
+审查提示：
+- 同样的 3 到 4 个字段或参数是否反复一起出现？
+- 它们是否代表一个稳定概念，值得拥有自己的对象？
 
-Review prompts:
-- Are strings, numbers, or booleans carrying domain concepts such as money, phone numbers, states, or units?
-- Are domain invariants enforced only by convention?
+重构方向：
+- 抽取类
+- 引入参数对象
+- 直接传递整个对象
 
-Refactoring directions:
-- Replace Primitive with Object
-- Replace Type Code with Subclasses
-- Replace Conditional with Polymorphism
+## 11. 基本类型偏执
 
-## 12. Repeated Switches
+审查提示：
+- 字符串、数字或布尔值是否在承载金钱、手机号、状态、单位等领域概念？
+- 领域不变量是否只能靠约定来维持？
 
-Review prompts:
-- Are there multiple switch statements or repeated if-else chains over the same type code or state?
-- Does adding one variant require editing many branches?
+重构方向：
+- 以对象取代基本类型
+- 以子类取代类型码
+- 以多态取代条件分支
 
-Refactoring directions:
-- Replace Conditional with Polymorphism
+## 12. 重复的条件分发
 
-## 13. Loops
+审查提示：
+- 是否存在多个 `switch` 语句，或围绕同一类型码/状态反复出现的 `if-else` 链？
+- 新增一个变体时，是否需要改很多处分支？
 
-Review prompts:
-- Are imperative loops obscuring collection transforms that would be clearer as a pipeline?
-- Would a declarative collection API improve readability without harming clarity or performance requirements?
+重构方向：
+- 以多态取代条件分支
 
-Refactoring directions:
-- Replace Loop with Pipeline
+## 13. 循环过重
 
-## 14. Lazy Element
+审查提示：
+- 命令式循环是否把本可更清晰表达的集合转换逻辑搞得难懂？
+- 在不损害清晰度或性能要求的前提下，声明式集合 API 是否会更可读？
 
-Review prompts:
-- Does a class, function, or abstraction do too little to justify its existence?
-- Is it left behind by earlier refactoring or over-design?
+重构方向：
+- 用管道式处理取代循环
 
-Refactoring directions:
-- Inline Function
-- Inline Class
-- Collapse Hierarchy
+## 14. 懒惰元素
 
-## 15. Speculative Generality
+审查提示：
+- 某个类、函数或抽象是否做得太少，不值得继续存在？
+- 它是否只是早期重构或过度设计后留下的壳？
 
-Review prompts:
-- Is an abstraction present for a future requirement that has not arrived?
-- Are hooks, extension points, or inheritance layers unused or unjustified?
+重构方向：
+- 内联函数
+- 内联类
+- 折叠继承层次
 
-Refactoring directions:
-- Collapse Hierarchy
-- Inline Function
-- Inline Class
-- Change Function Declaration
-- Remove Dead Code
+## 15. 推测性泛化
 
-## 16. Temporary Field
+审查提示：
+- 是否为了尚未到来的未来需求提前放进了某个抽象？
+- 钩子、扩展点或继承层次是否处于未使用或缺乏正当性的状态？
 
-Review prompts:
-- Are some fields meaningful only for a narrow algorithm or one call path?
-- Do they stay null or irrelevant most of the time?
+重构方向：
+- 折叠继承层次
+- 内联函数
+- 内联类
+- 修改函数声明
+- 删除死代码
 
-Refactoring directions:
-- Extract Class
-- Extract Function
-- Introduce Special Case
+## 16. 临时字段
 
-## 17. Message Chains
+审查提示：
+- 某些字段是否只对某个狭窄算法或某条调用路径有意义？
+- 它们在大多数时间里是否都是 `null` 或无关紧要？
 
-Review prompts:
-- Are there long object navigation chains like `a.b().c().d()`?
-- Does the caller know too much about collaborator internals?
+重构方向：
+- 抽取类
+- 抽取函数
+- 引入特例
 
-Refactoring directions:
-- Hide Delegate
-- Extract Function
-- Move Method
+## 17. 消息链
 
-## 18. Middle Man
+审查提示：
+- 是否存在像 `a.b().c().d()` 这样的长对象导航链？
+- 调用方是否知道了太多协作者的内部细节？
 
-Review prompts:
-- Does a class mainly forward calls elsewhere with little original behavior?
-- Is delegation adding ceremony without insulating useful complexity?
+重构方向：
+- 隐藏委托关系
+- 抽取函数
+- 移动方法
 
-Refactoring directions:
-- Remove Middle Man
-- Inline Function
+## 18. 中间人
 
-## 19. Insider Trading
+审查提示：
+- 某个类是否主要只是把调用转发给别处，几乎没有自己的行为？
+- 这种委托是否只增加了仪式感，却没有隔离出真正有价值的复杂度？
 
-Review prompts:
-- Do two modules exchange private details too freely?
-- Is the collaboration too intimate for the intended encapsulation boundary?
+重构方向：
+- 移除中间人
+- 内联函数
 
-Refactoring directions:
-- Move Method
-- Hide Delegate
-- Replace Subclass with Delegate
-- Replace Superclass with Delegate
+## 19. 内幕交易
 
-## 20. Large Class
+审查提示：
+- 两个模块是否过于自由地交换私有细节？
+- 这种协作亲密度是否已经越过了原本的封装边界？
 
-Review prompts:
-- Does one class own too many fields, methods, or responsibilities?
-- Is it acting as an accumulation point for unrelated behavior?
+重构方向：
+- 移动方法
+- 隐藏委托关系
+- 以委托取代子类
+- 以委托取代父类
 
-Refactoring directions:
-- Extract Superclass
-- Replace Type Code with Subclasses
-- Extract Class
+## 20. 过大的类
 
-## 21. Alternative Classes with Different Interfaces
+审查提示：
+- 某个类是否拥有过多字段、方法或职责？
+- 它是否成了不相关行为不断堆积的聚集点？
 
-Review prompts:
-- Are there similar concepts implemented with incompatible method names or signatures?
-- Could callers share a common interface if the APIs were aligned?
+重构方向：
+- 提炼父类
+- 以子类取代类型码
+- 抽取类
 
-Refactoring directions:
-- Change Function Declaration
-- Move Method
-- Extract Superclass
+## 21. 接口不一致的平行类
 
-## 22. Data Class
+审查提示：
+- 相似概念是否被实现成了方法名或签名互不兼容的多个类？
+- 如果对齐 API，调用方是否本可共享一套共同接口？
 
-Review prompts:
-- Is a class mostly fields plus getters and setters?
-- Does behavior that belongs with the data live elsewhere?
+重构方向：
+- 修改函数声明
+- 移动方法
+- 提炼父类
 
-Refactoring directions:
-- Encapsulate Record
-- Remove Setting Method
-- Move Method
-- Extract Function
-- Split Phase
+## 22. 数据类
 
-## 23. Refused Bequest
+审查提示：
+- 某个类是否基本只包含字段加 getter/setter？
+- 本应跟数据放在一起的行为是否散落在别处？
 
-Review prompts:
-- Does a subclass inherit behavior or fields it does not truly want?
-- Does the inheritance relationship violate substitutability?
+重构方向：
+- 封装记录
+- 移除设值方法
+- 移动方法
+- 抽取函数
+- 拆分阶段
 
-Refactoring directions:
-- Replace Subclass with Delegate
-- Replace Superclass with Delegate
+## 23. 被拒绝的遗赠
 
-## 24. Comments
+审查提示：
+- 子类是否继承了自己并不真正想要的行为或字段？
+- 这种继承关系是否破坏了可替换性？
 
-Review prompts:
-- Are long comments compensating for confusing code?
-- Is the comment explaining how tangled code works rather than why it exists?
+重构方向：
+- 以委托取代子类
+- 以委托取代父类
 
-Refactoring directions:
-- Extract Function
-- Change Function Declaration
-- Introduce Assertion
+## 24. 注释掩盖混乱
 
-## Triage Guidance
+审查提示：
+- 很长的注释是否是在为难懂的代码打补丁？
+- 注释是否主要在解释一团纠缠的代码“怎么工作”，而不是说明它“为什么存在”？
 
-When many smells are present, prefer reporting the ones that:
-- distort change boundaries
-- force many-file edits
-- hide domain logic behind weak naming or oversized functions
-- separate behavior from the data it belongs to
-- create correctness risk through mutable shared state
+重构方向：
+- 抽取函数
+- 修改函数声明
+- 引入断言
 
-Treat smells as related patterns. For example:
-- `Large Class` often co-occurs with `Divergent Change`
-- `Shotgun Surgery` often points back to weak cohesion
-- `Data Clumps` and `Primitive Obsession` often suggest missing domain objects
-- `Feature Envy` and `Message Chains` often reveal misplaced behavior
+## 分诊指引
+
+当异味很多时，优先报告那些：
+- 扭曲了变更边界
+- 迫使改动扩散到许多文件
+- 用糟糕命名或超长函数遮蔽领域逻辑
+- 把行为从它所属的数据身边拆散
+- 通过可变共享状态制造正确性风险
+
+把异味看作相互关联的一组模式。例如：
+- `过大的类` 往往和 `发散式变化` 同时出现
+- `霰弹式修改` 往往指向内聚性薄弱
+- `数据泥团` 与 `基本类型偏执` 往往暗示缺失领域对象
+- `依恋情结` 与 `消息链` 往往暴露出行为放错了位置

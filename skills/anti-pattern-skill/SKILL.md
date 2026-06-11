@@ -1,136 +1,109 @@
 ---
 name: anti-pattern-skill
-description: Deep review skill for identifying software, testing, delivery, and project anti-patterns that create more problems than they solve. Use when Codex needs to review a repository, subsystem, change set, architecture, testing strategy, implementation plan, or project approach for spaghetti code, lava flow, accidental complexity, god objects, hard-coded behavior, premature optimization, reinvention, copy-paste programming, or testing anti-patterns, and produce a structured review report plus a severity-ranked remediation backlog.
+description: 深度审查软件、测试、交付与项目层面的反模式，识别那些看似在解决问题、实则让系统更难演进的做法。适用于审查仓库、子系统、变更集、架构、测试策略、实现计划或项目推进方式，发现意大利面代码、熔岩流、偶发复杂度、上帝对象、硬编码、过早优化、重复造轮子、复制粘贴式编程及测试反模式，并输出结构化审查报告与按严重级别排序的整改待办。
 ---
 
-# Anti-Pattern Review
+# 反模式审查
 
-## Overview
+## 概览
 
-Use this skill to review code, tests, and delivery approaches for anti-patterns: approaches that appear to solve a problem locally but make the system harder to change, understand, or trust over time.
+使用这个 skill 审查代码、测试和交付方式中的反模式：它们往往在局部看起来像是在解决问题，却会随着时间推移让系统更难修改、更难理解、更不值得信任。
 
-Read [references/anti-patterns-checklist.md](references/anti-patterns-checklist.md) before reviewing so the anti-pattern definitions, review prompts, and correction directions stay consistent.
+开始审查前先阅读 [references/anti-patterns-checklist.md](references/anti-patterns-checklist.md)，以保持反模式定义、审查提示和纠偏方向的一致性。
 
-This skill complements `bad-smells-skill`. Use `bad-smells-skill` for refactoring-smell code review. Use this skill when the review needs a broader lens across code structure, testing strategy, delivery choices, and project-level habits.
+## 审查流程
 
-## Review Workflow
+1. 在下判断前先划清审查范围。
+2. 识别主要执行路径、职责边界、配置面、测试布局，以及当前活跃的变更热点。
+3. 为当前场景选择最有效的审查视角：编程反模式、方法论反模式、测试反模式，或它们的组合。
+4. 基于清单提出反模式假设，再用仓库或项目证据逐条验证。
+5. 只报告那些具体到足以支持纠正行动的发现。
 
-1. Map the review scope before judging it.
-2. Identify the main execution paths, ownership boundaries, configuration surface, test layout, and active change hotspots.
-3. Choose the strongest review lens for the situation: programming anti-patterns, methodology anti-patterns, testing anti-patterns, or a mix.
-4. Generate anti-pattern hypotheses from the checklist, then verify each one against repository or project evidence.
-5. Report only findings that are specific enough to support a corrective action.
+不要试图把每一个瑕疵都贴上“反模式”的标签。反模式指的是反复出现、持续有害的做法，而不是零散的粗糙点。
 
-Do not try to label every imperfection as an anti-pattern. Anti-patterns are recurring harmful approaches, not isolated rough edges.
+## 证据标准
 
-## Evidence Standard
+把每一条发现都当作一个需要证明的主张。
 
-Treat each finding as a claim that needs proof.
+对于每个报告出的反模式：
+- 引用支持它的文件路径、测试、文档或项目产物
+- 说明什么局部行为或结构让它看起来像一个“解决方案”
+- 说明它随着时间推移会带来的更大成本
+- 区分观察到的事实与推断
+- 给出能够渐进式降低伤害的纠正方向
 
-For every reported anti-pattern:
-- cite the file paths, tests, documents, or project artifacts that support it
-- explain the local behavior or structure that makes it look like a solution
-- explain the broader cost it introduces over time
-- distinguish observed facts from inference
-- recommend a correction direction that reduces the harm incrementally
+避免只基于代码风格偏好、框架口味或孤立单行代码形成薄弱结论。
 
-Prefer findings backed by one of these evidence patterns:
-- repeated code or structure that spread from one local shortcut
-- dead or half-abandoned code paths left in place without ownership
-- classes, modules, or services absorbing too many responsibilities
-- custom implementations created where a stable existing approach already exists
-- tests coupled to internals or missing edge-case coverage in a risky area
-- delivery or design choices justified by theoretical needs rather than observed requirements
+## 如何检查代码库或项目
 
-Avoid weak findings based only on style preferences, framework taste, or single isolated lines.
+先看结构：
+- 检查顶层目录和入口点
+- 定位主要服务、任务、处理器、控制器和测试套件
+- 识别配置来源、特性开关和环境假设
+- 检查架构文档、ADR、计划或注释是否仍与当前代码一致
 
-## Review Priorities
+再看反模式压力：
+- 大文件、大类、深层嵌套或纠缠的控制流
+- 死代码、陈旧抽象，或已经不再参与执行的分支
+- 直接写在代码里的字面量、凭据、阈值或策略值
+- 对已被良好解决的问题进行重复自定义实现
+- 动机不清、缺乏测量支撑的性能导向代码
+- 只要内部实现一挪动就会失败、但行为其实没变的测试
+- 只覆盖预期路径、忽略失败模式和边界条件的测试套件
 
-Prioritize anti-patterns that most strongly degrade changeability, reliability, or team velocity:
+如果你审查的是计划或提案而不是代码库，也要用同样的视角检查其中的抽象设计、依赖选择、测试策略和发布逻辑。反模式往往在落地到代码之前就已经存在于方案里。
 
-1. Accidental Complexity
-2. Spaghetti Code
-3. God Object
-4. Lava Flow
-5. Copy-and-Paste Programming
-6. Premature Optimization
-7. Wrong Tests
-8. Testing Internal Implementation
-9. Happy Path Only Testing
-10. Hard Coding
-11. Reinventing the Wheel
-12. Magic Numbers
+## 报告规则
 
-If the repository has a different dominant risk profile, say so and adjust the order explicitly.
+先给发现，再给叙述。
 
-## How to Inspect a Codebase or Project
+每条发现都应包含：
+- 标题
+- 反模式名称
+- 类别：`programming`、`methodology` 或 `testing`
+- 严重级别：`high`、`medium` 或 `low`
+- 置信度
+- 证据
+- 影响
+- 建议的纠正方向
 
-Start with structure:
-- inspect top-level directories and entrypoints
-- locate main services, jobs, handlers, controllers, and test suites
-- identify configuration sources, feature flags, and environment assumptions
-- check whether architecture docs, ADRs, plans, or comments match the current code
+当反模式已经实质性损害可变更性、正确性风险、交付信心或架构清晰度时，使用 `high`。对于明确存在、但影响范围有限的可维护性或测试债务，使用 `medium`。对于真实存在但次要的问题，使用 `low`。
 
-Then inspect for anti-pattern pressure:
-- large files, large classes, deep nesting, or tangled control flow
-- dead code, stale abstractions, or branches that no longer participate in execution
-- literals, credentials, thresholds, or policy values embedded directly in code
-- repeated custom implementations of solved problems
-- performance-driven code with unclear measurement or need
-- tests that break when internals move but behavior stays the same
-- suites that cover only the expected path while ignoring failure modes and boundaries
+置信度应反映证据量：
+- `high`：多个位置的直接证据，或很强的结构性证据
+- `medium`：局部证据清晰，但仓库覆盖范围有限
+- `low`：担忧看起来合理，但证据仍不完整；除非用户明确要你提供推测性线索，否则优先省略这类发现
 
-When reviewing a plan or proposal rather than a codebase, inspect the intended abstractions, dependency choices, testing strategy, and rollout logic with the same lens. Anti-patterns can exist in the approach before they land in code.
+优先关注那些最明显损害可变更性、可靠性或团队交付速度的反模式。
 
-## Reporting Rules
+## 必需输出
 
-Lead with findings, not narration.
+始终产出两个部分。
 
-For each finding, include:
-- title
-- anti-pattern name
-- category: `programming`, `methodology`, or `testing`
-- severity: `high`, `medium`, or `low`
-- confidence
-- evidence
-- impact
-- recommended correction direction
+### 1. 结构化审查报告
 
-Use `high` when the anti-pattern materially harms changeability, correctness risk, delivery confidence, or architectural clarity. Use `medium` for clear maintainability or testing debt with bounded blast radius. Use `low` for real but secondary issues.
+按严重级别排序，再按置信度和可能影响排序列出发现。每条发现都要简洁、基于证据。
 
-Confidence should reflect the amount of evidence available:
-- `high`: direct evidence from multiple locations or strong structural proof
-- `medium`: clear local evidence with limited repository coverage
-- `low`: plausible concern but incomplete evidence; prefer omitting these unless the user asked for speculative leads
-
-## Required Output
-
-Always produce two sections.
-
-### 1. Structured Review Report
-
-List findings ordered by severity, then by confidence and likely impact. Keep each finding crisp and evidence-based.
-
-Use this shape:
+使用如下结构：
 
 ```md
 ## Findings
 
-### 1. Short finding title
+### 1. 简短的发现标题
 - Anti-pattern: Premature Optimization
 - Category: methodology
 - Severity: high
 - Confidence: medium
-- Evidence: `src/cache.ts` and `docs/design.md` introduce a multi-layer cache with no measured bottleneck and no fallback invalidation strategy.
-- Impact: The team now has more invalidation paths to maintain than proven latency needs to justify, increasing complexity and bug risk.
-- Recommended correction: Remove speculative layers, keep one measured optimization path, and add benchmarks before further tuning.
+- Evidence: `src/cache.ts` 和 `docs/design.md` 引入了多层缓存，但没有已测量的性能瓶颈，也没有回退失效策略。
+- Impact: 团队现在要维护的失效路径比已被证明的延迟收益更多，复杂度和缺陷风险都被抬高了。
+- Recommended correction: 删除推测性的缓存层，保留一条有测量依据的优化路径，并在继续调优前补上基准测试。
 ```
 
-### 2. Severity-Ranked Remediation Backlog
+### 2. 按严重级别排序的整改待办
 
-Translate the findings into an execution-ordered action list.
+把审查发现翻译成一个按执行顺序排列的行动清单。
 
-For each backlog item, include:
+每个待办项都应包含：
 - priority
 - target area
 - goal
@@ -138,19 +111,19 @@ For each backlog item, include:
 - expected payoff
 - risk notes
 
-Prefer low-risk, high-leverage starting moves such as deleting dead code, extracting reusable behavior, moving configuration out of code, simplifying overbuilt abstractions, or rebalancing tests toward observable behavior.
+优先从低风险、高杠杆的动作开始，比如删除死代码、抽取可复用行为、把配置移出代码、简化过度设计的抽象，或把测试重新平衡到面向可观察行为的层面。
 
-## What Not to Do
+## 不要做什么
 
-Do not:
-- stretch the term anti-pattern to cover ordinary code cleanup
-- report a finding without naming the evidence that supports it
-- recommend a rewrite when an incremental correction is possible
-- assume a repository-wide problem from one isolated snippet
-- confuse deliberate trade-offs with anti-patterns unless the broader harm is visible
+不要：
+- 把“反模式”一词滥用到普通代码清理上
+- 在没有点明支撑证据的情况下报告发现
+- 在可以渐进修正时直接建议重写
+- 仅凭一个孤立片段就推断整个仓库都存在同类问题
+- 把有意识的权衡误判为反模式，除非更广泛的伤害已经可见
 
-If you do not find high-confidence anti-patterns, say so plainly and note the review scope you covered.
+如果你没有发现高置信度的反模式，就直接说明这一点，并补充你覆盖了哪些审查范围。
 
-## Review Posture
+## 审查姿态
 
-Be rigorous, practical, and a little skeptical of solutions that look clever but age badly. The goal is not to moralize about code. The goal is to identify recurring harmful approaches, explain why they cost more than they save, and turn that diagnosis into a usable remediation backlog.
+要严谨、务实，并且对那些看上去聪明、却会随着时间老化得很糟的“解法”保持一点怀疑。目标不是道德化地批判代码，而是识别那些反复出现的有害做法，解释为什么它们的代价大于收益，并把诊断结果转化为可执行的整改待办。

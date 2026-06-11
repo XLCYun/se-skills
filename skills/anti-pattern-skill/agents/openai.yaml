@@ -1,4 +1,4 @@
 interface:
-  display_name: "Anti-Pattern Review"
-  short_description: "Review software and project anti-patterns"
-  default_prompt: "Use $anti-pattern-skill to review this repository, subsystem, or project approach for anti-patterns and produce a structured report plus a remediation backlog."
+  display_name: "反模式审查"
+  short_description: "审查软件与项目中的反模式"
+  default_prompt: "使用 $anti-pattern-skill 审查这个仓库、子系统或项目方案中的反模式，并产出结构化报告与整改待办。"

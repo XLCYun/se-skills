@@ -1,184 +1,184 @@
-# Software Anti-Patterns Checklist
+# 软件反模式检查清单
 
-Use this checklist as a thinking aid, not a scoring sheet. Report only anti-patterns backed by repository or project evidence.
+把这份清单当作思考辅助，而不是打分表。只报告那些有仓库或项目证据支撑的反模式。
 
-## Definition
+## 定义
 
-Andrew Koenig described anti-patterns this way in 1995:
+Andrew Koenig 在 1995 年这样描述反模式：
 
-> An antipattern is just like a pattern, except that instead of a solution it gives something that looks superficially like a solution, but isn't one.
+> 反模式就像模式一样，只不过它给出的不是解决方案，而是某种表面上看像解决方案、实际上却不是的东西。
 
-Use that definition literally while reviewing: focus on approaches that look helpful locally but create broader or longer-term harm.
+审查时请按这个定义来理解：重点关注那些在局部看似有帮助、却会带来更广泛或更长期伤害的做法。
 
-## Common Consequences
+## 常见后果
 
-Anti-patterns commonly lead to:
-- inefficient or ineffective problem solving
-- higher complexity and maintenance cost
-- lower readability and understandability
-- lower team productivity and confidence
+反模式通常会导致：
+- 低效或无效地解决问题
+- 更高的复杂度与维护成本
+- 更低的可读性与可理解性
+- 更低的团队生产力与信心
 
-## 1. Spaghetti Code
+## 1. 意大利面代码
 
-Review prompts:
-- Is the code poorly structured or hard to summarize?
-- Does it lack modularity, separation of concerns, or clear ownership?
-- Would modifying one behavior require tracing a tangled control flow first?
+审查提示：
+- 代码结构是否混乱，或者很难概括清楚？
+- 是否缺乏模块化、关注点分离或清晰的职责归属？
+- 修改一个行为前，是否必须先沿着纠缠的控制流一路追踪？
 
-Correction directions:
-- Split large blocks into smaller reusable units
-- Keep methods focused on one job
-- Extract clearer boundaries between concerns
+纠正方向：
+- 把大块逻辑拆成更小、可复用的单元
+- 让方法专注于单一职责
+- 在不同关注点之间抽出更清晰的边界
 
-## 2. Lava Flow
+## 2. 熔岩流
 
-Review prompts:
-- Is unused, stale, or abandoned code still present in the codebase?
-- Is it hard to tell why a module, branch, or flag still exists?
-- Are dead paths being preserved "just in case" without ownership?
+审查提示：
+- 代码库里是否仍保留着未使用、陈旧或已废弃的代码？
+- 是否很难说明某个模块、分支或开关现在为什么还存在？
+- 是否有死路径只是“以防万一”地被保留着，却没有明确负责人？
 
-Correction directions:
-- Remove unused code as soon as confidence allows
-- Verify reachability with searches, tests, and runtime entrypoints
-- Use regular refactoring to keep obsolete code from accumulating
+纠正方向：
+- 一旦有足够把握，就尽快删除未使用代码
+- 通过搜索、测试和运行时入口验证代码是否仍可达
+- 用持续重构阻止过时代码不断堆积
 
-## 3. Accidental Complexity
+## 3. 偶发复杂度
 
-Review prompts:
-- Is the solution significantly more complicated than the problem requires?
-- Has the design introduced extra layers, abstractions, or states without clear payoff?
-- Does the implementation violate KISS in the name of flexibility or cleverness?
+审查提示：
+- 方案是否明显比问题本身需要的复杂？
+- 设计是否引入了额外层级、抽象或状态，却没有清晰回报？
+- 是否打着灵活性或“聪明实现”的旗号违背了 KISS 原则？
 
-Correction directions:
-- Simplify the design to the minimum that meets current requirements
-- Remove speculative abstractions and unnecessary indirection
-- Prefer understandable flows over clever ones
+纠正方向：
+- 把设计简化到刚好满足当前需求的最小程度
+- 删除推测性的抽象和不必要的间接层
+- 优先选择易懂的流程，而不是“巧妙”的流程
 
-## 4. God Object
+## 4. 上帝对象
 
-Review prompts:
-- Does one class, service, or module try to do too many things?
-- Are unrelated responsibilities converging in one place?
-- Does change in many areas of the domain repeatedly land in the same object?
+审查提示：
+- 是否有某个类、服务或模块试图处理太多事情？
+- 是否有彼此无关的职责不断汇聚到同一个地方？
+- 领域中许多不同方向的变更，是否总是反复落到同一个对象上？
 
-Correction directions:
-- Split the object into smaller units with focused responsibilities
-- Reassign behavior to better ownership boundaries
-- Restore single-responsibility-oriented structure
+纠正方向：
+- 把对象拆成职责更聚焦的小单元
+- 把行为重新分配到更合适的职责边界
+- 恢复面向单一职责的结构
 
-## 5. Hard Coding
+## 5. 硬编码
 
-Review prompts:
-- Are policy values, endpoints, thresholds, credentials, or environment assumptions embedded directly in source code?
-- Does changing behavior require source edits rather than configuration updates?
-- Are the same values repeated across files instead of being centrally managed?
+审查提示：
+- 策略值、端点、阈值、凭据或环境假设是否直接写在源代码里？
+- 修改行为时，是否必须改源码，而不是改配置？
+- 同样的值是否散落在多个文件里，而不是集中管理？
 
-Correction directions:
-- Move configuration to config files, environment variables, or data stores
-- Centralize shared constants and policy values
-- Use static analysis where helpful to catch hard-coded values
+纠正方向：
+- 把配置迁移到配置文件、环境变量或数据存储中
+- 集中管理共享常量和策略值
+- 在合适时使用静态分析帮助发现硬编码值
 
-## 6. Magic Numbers
+## 6. 魔法数字
 
-Review prompts:
-- Are numeric literals used without meaningful names or explanation?
-- Would a maintainer struggle to know what a value represents?
-- Are domain thresholds or units encoded as bare numbers?
+审查提示：
+- 是否存在没有有意义名称或解释的数字字面量？
+- 维护者是否很难判断某个值到底代表什么？
+- 领域阈值或单位是否以裸数字形式直接编码？
 
-Correction directions:
-- Replace literals with named constants or value objects
-- Document domain meaning where the name alone is insufficient
-- Group related constants by domain concept
+纠正方向：
+- 用具名常量或值对象替换字面量
+- 当仅靠名称还不足够时，补充领域含义说明
+- 按领域概念对相关常量进行归类
 
-## 7. Premature Optimization
+## 7. 过早优化
 
-Review prompts:
-- Has performance complexity been introduced before confirming the need?
-- Are caches, concurrency, pooling, or indexing layers justified by measurement?
-- Has performance tuning reduced readability or maintainability without proven benefit?
+审查提示：
+- 是否在尚未确认需要之前，就引入了性能复杂度？
+- 缓存、并发、池化或索引层是否有测量结果支撑？
+- 性能调优是否在没有已证实收益的情况下，牺牲了可读性或可维护性？
 
-Correction directions:
-- Optimize only where measured bottlenecks exist
-- Remove speculative performance machinery
-- Add benchmarks or production evidence before further tuning
+纠正方向：
+- 仅在已测得的瓶颈位置进行优化
+- 删除推测性的性能机制
+- 继续调优前先补上基准测试或生产证据
 
-## 8. Reinventing the Wheel
+## 8. 重复造轮子
 
-Review prompts:
-- Has the team built a custom solution where a stable existing one would suffice?
-- Is the custom implementation increasing time, cost, or correctness risk?
-- Would an established library, framework feature, or internal platform solve the problem more safely?
+审查提示：
+- 团队是否在已有稳定方案足够适用时，仍然自己造了一套？
+- 自定义实现是否提升了时间成本、维护成本或正确性风险？
+- 成熟库、框架能力或内部平台方案是否能更稳妥地解决问题？
 
-Correction directions:
-- Prefer established solutions unless strong constraints justify custom work
-- Record the reason when not using an existing solution
-- Replace fragile homegrown implementations selectively
+纠正方向：
+- 除非有强约束，否则优先采用成熟方案
+- 当不采用现有方案时，记录清楚原因
+- 有选择地替换脆弱的自研实现
 
-## 9. Copy-and-Paste Programming
+## 9. 复制粘贴式编程
 
-Review prompts:
-- Has code been duplicated instead of reused through abstraction?
-- Do multiple locations share the same logic with only minor edits?
-- Would bug fixes require repeating the same edit in several places?
+审查提示：
+- 是否通过复制代码而不是复用抽象来实现相似逻辑？
+- 多处位置是否共享同样的逻辑，只做了细微修改？
+- 修一个 bug 时，是否需要在多个地方重复做同样的改动？
 
-Correction directions:
-- Extract shared behavior into reusable functions, classes, or modules
-- Refactor repeated logic before it drifts further
-- Keep abstractions honest and small
+纠正方向：
+- 把共享行为抽取成可复用的函数、类或模块
+- 在重复进一步漂移之前先完成重构
+- 让抽象保持诚实且足够小
 
-## 10. Wrong Tests
+## 10. 错位测试
 
-Review prompts:
-- Is the chosen test type mismatched to the behavior being verified?
-- Are slow end-to-end tests covering logic that unit tests should own, or vice versa?
-- Does the current test mix create poor coverage or brittle feedback?
+审查提示：
+- 所选测试类型是否和被验证的行为不匹配？
+- 是否用缓慢的端到端测试覆盖本应由单元测试承担的逻辑，或反过来？
+- 当前测试组合是否带来了糟糕覆盖率或脆弱反馈？
 
-Correction directions:
-- Rebalance the suite toward the appropriate test types
-- Match test scope to the behavior and risk under test
-- Remove redundant tests that add cost without confidence
+纠正方向：
+- 把测试套件重新平衡到更合适的测试类型上
+- 让测试范围与被测行为及风险相匹配
+- 删除那些增加成本却不提升信心的冗余测试
 
-## 11. Testing Internal Implementation
+## 11. 测试内部实现
 
-Review prompts:
-- Are tests coupled to private methods, internal state, call order, or incidental structure?
-- Do tests fail when internals change even though observable behavior stays correct?
-- Is mocking or spying standing in for meaningful behavior verification?
+审查提示：
+- 测试是否耦合到私有方法、内部状态、调用顺序或偶然结构？
+- 当内部实现变化但外部行为仍正确时，测试是否仍会失败？
+- mocking 或 spying 是否替代了真正有意义的行为验证？
 
-Correction directions:
-- Assert observable behavior and external contracts
-- Reduce coupling to private implementation details
-- Keep test doubles focused on boundaries that matter
+纠正方向：
+- 断言可观察行为和外部契约
+- 降低对私有实现细节的耦合
+- 让测试替身只聚焦于真正重要的边界
 
-## 12. Happy Path Only Testing
+## 12. 只测 Happy Path
 
-Review prompts:
-- Do tests cover only the expected case and skip failures, boundaries, and invalid input?
-- Are error handling and recovery paths left largely untested?
-- Would a surprising input or environment state likely escape detection?
+审查提示：
+- 测试是否只覆盖预期场景，而跳过失败、边界和非法输入？
+- 错误处理和恢复路径是否基本没被测试到？
+- 面对意外输入或环境状态时，问题是否很可能逃过检测？
 
-Correction directions:
-- Add edge cases, failure paths, and boundary-condition coverage
-- Exercise error handling intentionally
-- Review risky flows for missing negative tests
+纠正方向：
+- 补充边界场景、失败路径和边界条件覆盖
+- 有意识地演练错误处理逻辑
+- 复查高风险流程中缺失的负向测试
 
-## How to Recognize Anti-Patterns Early
+## 如何尽早识别反模式
 
-Look for these warning signs:
-- solutions that are hard to explain simply
-- changes that require edits across too many places
-- code or tests that no one wants to touch
-- layers or abstractions justified by hypothetical future needs
-- custom infrastructure built before understanding whether the problem is common or stable
+留意这些预警信号：
+- 解决方案很难用简单语言解释清楚
+- 一次改动需要触碰过多位置
+- 有些代码或测试谁都不愿意碰
+- 某些层次或抽象只是为假设性的未来需求服务
+- 在尚未理解问题是否常见、是否稳定前，就先造了自定义基础设施
 
-Keep an open mind and question your own assumptions. Feedback from others is valuable because anti-patterns often feel reasonable from the inside.
+保持开放心态，也要质疑自己的假设。来自他人的反馈很有价值，因为身处其中时，反模式往往会显得“挺合理”。
 
-## How to Avoid Anti-Patterns
+## 如何避免反模式
 
-Use these habits while designing and reviewing:
-- step back and consider the larger context before locking onto a solution
-- prefer proven patterns and established best practices
-- break large problems into smaller, clearer pieces
-- ask for feedback early when trade-offs are uncertain
-- keep reviewing and simplifying as understanding improves
-- do not be afraid to delete or restart a poor approach when incremental repair is no longer worth it
+设计和审查时养成这些习惯：
+- 在锁定某个方案前，先退一步看更大的上下文
+- 优先采用被验证过的模式和成熟最佳实践
+- 把大问题拆成更小、更清晰的部分
+- 当权衡不确定时，尽早征求反馈
+- 随着理解加深，持续审查并简化方案
+- 当渐进修补已经不值得时，不要害怕删除或重来一个糟糕方案

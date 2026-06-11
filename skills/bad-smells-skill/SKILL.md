@@ -1,148 +1,111 @@
 ---
 name: bad-smells-skill
-description: Deep code review skill for identifying design problems and maintainability risks through the refactoring bad-smells lens. Use when Codex needs to review a repository, subsystem, or change set for poor design, hidden coupling, duplication, oversized functions or classes, speculative abstractions, data clumps, message chains, or other refactoring smells, and produce a structured review report plus a severity-ranked remediation backlog.
+description: 从重构坏味道视角进行深度代码审查，识别设计问题与可维护性风险。适用于审查仓库、子系统或变更集，发现糟糕设计、隐藏耦合、重复代码、过大的函数或类、推测性抽象、数据泥团、消息链等坏味道，并输出结构化审查报告与按严重级别排序的整改待办。
 ---
 
-# Bad Smell Review
+# 坏味道审查
 
-## Overview
+## 概览
 
-Use this skill to perform a deep code review centered on design quality rather than style nitpicks. Favor high-confidence findings with concrete evidence. Produce a structured review report and a severity-ranked remediation backlog.
+使用这个 skill 执行深度代码审查，聚焦于设计质量。目标是识别那些最可能拖慢未来工作或埋下隐性缺陷的设计弱点，最终输出结构化审查报告以及相关的整改待办。
 
-Read [references/bad-smells-checklist.md](references/bad-smells-checklist.md) before reviewing code so the smell definitions, review prompts, and refactoring directions stay consistent.
+开始审查代码前先阅读 [references/bad-smells-checklist.md](references/bad-smells-checklist.md)，以保持坏味道定义、审查提示和重构方向的一致性。
 
-## Review Workflow
+## 审查流程
 
-1. Map the repository before judging it.
-2. Identify the core execution paths, ownership boundaries, and shared abstractions.
-3. Focus on the modules most likely to concentrate design risk: core domain logic, orchestration layers, widely imported utilities, large classes, large files, and hotspots tied to recent changes.
-4. Generate smell hypotheses from the checklist, then verify each one against code evidence.
-5. Report only findings that have enough evidence to survive pushback from a skeptical maintainer.
+1. 在下判断前先理解仓库结构。
+2. 识别核心执行路径、职责边界和共享抽象。
+3. 把注意力放在最可能聚集设计风险的模块：核心领域逻辑、编排层、被广泛导入的工具、大类、大文件，以及近期变更关联的热点。
+4. 基于清单提出坏味道假设，再用代码证据逐条验证。
+5. 只报告那些证据足够扎实发现。
 
-Do not try to review every file line by line unless the repository is tiny. Sample broadly, then dive deeply where signals are strongest.
+注意：
+1. 清单比较长，如果允许，使用多个并行子 Agent 进行审查
+2. 对于无法使用并行子 Agent，且代码仓库过大时，先广泛取样，再在信号最强的地方深入
 
-## Evidence Standard
+## 证据标准
 
-Treat each finding as a claim that must be supported.
+对于每个报告出的坏味道：
+- 引用相关文件路径，以及最关键的函数、方法、类或字段
+- 说明是什么行为或结构触发了这个坏味道判断
+- 区分观察到的事实与推断
+- 说明为什么这属于设计或可维护性问题，而不只是样式偏好
+- 给出与该坏味道相匹配的重构方向
 
-For every reported smell:
-- Cite the file paths and the most relevant functions, methods, classes, or fields.
-- Explain what behavior or structure triggered the smell.
-- Distinguish observed facts from inference.
-- State why this is a design or maintainability problem, not just a stylistic preference.
-- Recommend refactoring directions that match the smell.
+避免只基于命名喜好、框架偏好或局部格式问题提出低价值发现。
 
-Prefer findings with one of these evidence patterns:
-- repeated structure across two or more places
-- a class or file combining unrelated responsibilities
-- a function whose control flow or dependencies obscure intent
-- cross-module coupling that makes change ripple outward
-- data passed around in clumps or represented with weak primitives
+## 如何检查代码库
 
-Avoid low-value findings based only on naming taste, framework preference, or local formatting.
+- 检查顶层目录
+- 定位主要入口点、服务、任务、处理器或控制器
+- 识别共享库、模型类型和横切辅助工具
 
-## Review Priorities
+如果审查的是某个变更集而不是整个仓库，也要看一下周边协作者，这样才能判断局部 diff 是否暴露了更深层的坏味道。
 
-Prioritize the smells that usually create the most leverage when fixed:
+## 报告规则
 
-1. Divergent Change
-2. Shotgun Surgery
-3. Feature Envy
-4. Large Class
-5. Long Function
-6. Duplicated Code
-7. Data Clumps
-8. Primitive Obsession
-9. Message Chains
-10. Mutable or Global Data
+先给发现，再给叙述。
 
-If the repository has a different dominant risk profile, say so and adjust the order explicitly.
+每条发现都应包含：
+- 标题
+- 坏味道名称
+- 严重级别：`高`、`中` 或 `低`
+- 证据
+- 影响
+- 建议的重构方向
+- 置信度
 
-## How to Inspect a Codebase
+当坏味道已经实质性损害可变更性、正确性风险或架构清晰度时，使用 `高`。对于明确存在、但影响范围有限的可维护性债务，使用 `中`。对于真实存在但次要的清理项，使用 `低`。
 
-Start with structure:
-- inspect top-level directories
-- locate main entrypoints, services, jobs, handlers, or controllers
-- identify shared libraries, model types, and cross-cutting helpers
+置信度应反映证据量：
+- `高`：多个位置的直接证据，或很强的结构性证据
+- `中`：局部证据清晰，但仓库覆盖范围有限
+- `低`：坏味道看起来合理，但证据仍不完整；除非用户明确要你提供推测性线索，否则优先省略这类发现
 
-Then inspect for design pressure:
-- unusually large files, classes, or functions
-- many parameters or repeated parameter groups
-- modules with broad import fan-in or fan-out
-- repeated switch or if-else trees over the same type code
-- pass-through wrappers with little original behavior
-- long object navigation chains
-- comments that explain confusing code instead of intent
+## 必需输出
 
-When reviewing a change set rather than a whole repo, still examine surrounding collaborators so you can judge whether the local diff exposes a deeper smell.
+### 1. 结构化审查报告
 
-## Reporting Rules
+按严重级别排序，再按置信度和可能影响排序列出发现。每条发现都要简洁、基于证据。
 
-Lead with findings, not narration.
-
-For each finding, include:
-- title
-- smell name
-- severity: `high`, `medium`, or `low`
-- evidence
-- impact
-- recommended refactoring direction
-- confidence
-
-Use `high` when the smell materially harms changeability, correctness risk, or architectural clarity. Use `medium` for clear maintainability debt with limited blast radius. Use `low` for real but secondary cleanup.
-
-Confidence should reflect the amount of evidence available:
-- `high`: direct evidence from multiple locations or strong structural proof
-- `medium`: clear local evidence with limited repository coverage
-- `low`: plausible smell but incomplete evidence; prefer omitting these unless the user asked for speculative leads
-
-## Required Output
-
-Always produce two sections.
-
-### 1. Structured Review Report
-
-List findings ordered by severity, then by confidence and likely impact. Keep each finding crisp and evidence-based.
-
-Use this shape:
+使用如下结构：
 
 ```md
-## Findings
+## 发现
 
-### 1. Short finding title
-- Smell: Large Class
-- Severity: high
-- Confidence: high
-- Evidence: `path/to/file.ts` contains ...
-- Impact: Changes to pricing rules, validation, and persistence all converge here, so unrelated edits collide.
-- Refactoring direction: Extract Class, Move Method, Split Phase
+### 1. 简短的发现标题
+- 坏味道：过大的类
+- 严重级别：高
+- 置信度：高
+- 证据：`path/to/file.ts` 包含 ...
+- 影响：定价规则、校验和持久化修改都汇聚在这里，彼此无关的改动容易相互冲突。
+- 重构方向：抽取类、移动方法、拆分阶段
 ```
 
-### 2. Severity-Ranked Remediation Backlog
+### 2. 按严重级别排序的整改待办
 
-Translate the findings into an action list. Group by execution order, not by smell name.
+把审查发现翻译成一个行动清单，按执行顺序分组，而不是按坏味道名称分组。
 
-For each backlog item, include:
-- priority
-- target area
-- goal
-- recommended first refactor step
-- expected payoff
-- risk notes
+每个待办项都应包含：
+- 优先级
+- 目标区域
+- 重构目标
+- 重构方式
+- 预期收益
+- 风险说明
 
-Prefer low-risk, high-leverage starting moves such as extracting pure functions, introducing parameter objects, or moving behavior closer to the data it envies.
+优先从低风险、高收益的动作开始。
 
-## What Not to Do
+## 不要做什么
 
-Do not:
-- turn lint issues into fake bad-smell findings
-- report a smell without naming the evidence that supports it
-- recommend broad rewrites when incremental refactoring would work
-- assume a smell exists repo-wide from one isolated snippet
-- confuse framework ceremony with speculative generality unless the abstraction is truly unused or unjustified
+不要：
+- 把 lint 问题伪装成坏味道发现
+- 在没有点明支撑证据的情况下报告坏味道
+- 在可以渐进重构时建议大范围重写
+- 把框架样板代码误判为推测性泛化，除非那个抽象确实无人使用或没有正当性
 
-If you do not find high-confidence smells, say so plainly and note the review scope you covered.
+如果你没有发现高置信度的坏味道，就直接说明这一点，并补充你覆盖了哪些审查范围。
 
-## Review Posture
+## 审查姿态
 
-Be rigorous, a little suspicious, and very specific. The goal is not to prove the code is ugly. The goal is to identify the design weaknesses most likely to slow future work or cause hidden defects, then turn them into a practical remediation backlog.
+要严谨、带一点怀疑精神，而且足够具体。目标不是证明代码“很丑”，而是识别那些最可能拖慢未来工作或埋下隐性缺陷的设计弱点，再把它们转化成务实的整改待办。
