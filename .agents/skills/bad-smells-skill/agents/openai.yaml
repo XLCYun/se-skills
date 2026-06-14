@@ -1,0 +1,4 @@
+interface:
+  display_name: "坏味道审查"
+  short_description: "聚焦重构坏味道的深度代码审查指导"
+  default_prompt: "使用 $bad-smells-skill 审查这个仓库中的重构坏味道，并产出结构化报告与整改待办。"
