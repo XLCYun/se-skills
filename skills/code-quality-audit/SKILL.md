@@ -15,6 +15,7 @@ description: 可量化的代码质量审计。合并重构坏味道与软件反�
 
 - [references/checklist.md](references/checklist.md) — 31 项检查项：定义、档位、判定标准/评分锚点、边界规则
 - [references/output-schema.md](references/output-schema.md) — findings、结构摘要、覆盖回执、评分的 JSON schema
+- [references/rec-format.md](references/rec-format.md) — 子代理落盘用的 `.rec` 中间格式：LLM 不手写 JSON，写 `.rec` 后由 `emit_json.py` 序列化
 - [references/scoring.md](references/scoring.md) — 归一化公式与默认权重
 
 ## 五阶段流程
@@ -52,7 +53,7 @@ bash scripts/run_tools.sh <目标仓库路径> <工作区>
 - 该分片文件的工具指标摘录（lizard 复杂度、jscpd 重复块）
 - checklist.md 中的 B 档单元级项 + A 档确认协议
 
-**每个分片代理的输出**（写入 `<工作区>/findings/shard-<id>.json`，schema 见 output-schema.md）：
+**每个分片代理的输出**（先写 `<工作区>/findings/shard-<id>.rec`，再运行 `emit_json.py` 生成同名 `.json`；`.rec` 格式见 rec-format.md，最终 schema 见 output-schema.md）：
 
 1. `findings[]` — 逐单元核对结果，只含"存在"的项，但 `coverage.reviewed` 必须列出所有已核对单元（普查协议：对每个单元每个适用项做出 存在/不存在/不适用 判断）
 2. `summary[]` — 该分片每个类的结构摘要（字段表、方法签名、参数组合、条件分发点、出向依赖），供 Phase 3 使用
@@ -71,7 +72,7 @@ bash scripts/run_tools.sh <目标仓库路径> <工作区>
 - 每个专项代理精读上限 10 个文件；超限时对应 finding 标 `confidence: 中` 并在 evidence 中说明证据缺口
 - 所有下钻读取记录在 `coverage.drilldown[]`（路径 + 原因），保证证据链可审计
 
-输出写入 `<工作区>/findings/cross-<item>.json`。
+输出同样经 `.rec` → `emit_json.py` 落盘为 `<工作区>/findings/cross-<item>.json`。
 
 ### Phase 4 — 整体评级
 
@@ -84,17 +85,17 @@ bash scripts/run_tools.sh <目标仓库路径> <工作区>
 3. 工具指标（复杂度分布、重复率）
 4. 精读：入口点、最大的 3 个类、复杂度 top-5 文件、随机抽 2 个普通文件（按文件路径字母序取第 1 和中位那个，保证可复现）
 
-同样适用下钻规则（上限 10 个额外文件）。输出 `<工作区>/ratings.json`：每项 0–5 整数分 + 锚点引用 + 证据。
+同样适用下钻规则（上限 10 个额外文件）。输出经 `.rec` → `emit_json.py` 落盘为 `<工作区>/ratings.json`：每项 0–5 整数分 + 锚点引用 + 证据。
 
 ### Phase 5 — 汇总
 
 ```bash
-# 安全网：即使子代理已自检，汇总前再全局 repair 一次
-python3 scripts/repair_json.py <工作区>/findings/ <工作区>/ratings.json
+# 安全网：纯校验（不修复）。不合法的文件 = 重派对应子代理重写其 .rec 并重新 emit，不得手工/脚本修补
+python3 scripts/validate_json.py <工作区>/findings/ <工作区>/ratings.json
 python3 scripts/aggregate.py <工作区> [--weights <权重覆盖.json>]
 ```
 
-`repair_json.py` 对每个文件 `json.load` → `json.dump` 重写，自动把内嵌 `"` 转义为 `\"`。若文件已损坏无法解析，尝试修复常见引号问题后重写。aggregate.py 执行：schema 校验 → 按 `(item_id, file, unit)` 去重 → 覆盖审计（有缺口则退出码 2 并列出缺口单元，需重派后重跑）→ 计算加权发现密度 → 维度分数 → 加权总分 → 产出 `report.json` 与 `report.md`。
+`validate_json.py` 对每个文件做 `json.loads` + 角色 schema 校验，合法文件规范化重写（`json.dump`），**不合法的文件只报错绝不猜测式修复**——只有生产者子代理拥有还原原文所需的语义知识，校验失败必须重派该子代理。aggregate.py 执行：schema 校验 → 按 `(item_id, file, unit)` 去重 → 覆盖审计（有缺口则退出码 2 并列出缺口单元，需重派后重跑）→ 计算加权发现密度 → 维度分数 → 加权总分 → 产出 `report.json` 与 `report.md`。
 
 ## 编排方式
 
@@ -105,8 +106,8 @@ python3 scripts/aggregate.py <工作区> [--weights <权重覆盖.json>]
 **子代理 prompt 纪律**（两种编排方式通用）：
 
 - 必读清单是封闭的：不读完不允许返回；确实无法读取的文件记入 `coverage.skipped` 并给原因
-- 输出必须是 schema 合法的 JSON，不写叙述性总结
-- **写完 JSON 文件后必须立即运行** `python3 scripts/repair_json.py <输出文件路径>` 做校验+重写（`json.dump` 自动将内嵌 `"` 转义为 `\"`，保证文件是合法 JSON）。如果 repair 失败，检查 evidence/impact/refactoring 字段中的引号并修正
+- **不要手写 JSON 文件**（LLM 手写 JSON 迟早在引号/反斜杠/换行上产生非法文件）。先把结果写成 `<输出路径>.rec`（格式见 references/rec-format.md：prose 字段放 `<<< >>>` 原文块，任何引号原样书写，无需转义），然后运行 `python3 scripts/emit_json.py <输出路径>.rec` 生成合法 `.json`；非 0 退出时按报错行号修正 `.rec` 重跑，直到通过。序列化永远由脚本完成
+- 输出内容必须符合 output-schema.md（emit_json.py 会校验必填字段与枚举值），不写叙述性总结
 - 只报告有证据的"存在"，禁止推测性发现；证据不足时用 confidence 表达而不是省略字段
 
 ## 评分与权重
@@ -122,6 +123,7 @@ python3 scripts/aggregate.py <工作区> [--weights <权重覆盖.json>]
 ## 不要做什么
 
 - 不要让子代理"自行探索仓库"替代封闭必读清单
+- 不要让子代理手写 JSON，也不要用启发式脚本"猜修"不合法的 JSON——校验失败只能重派生产者
 - 不要把工具可计数的 A 档项交给 LLM 数数
 - 不要在覆盖审计不通过时手工放行
 - 不要把 lint 级样式问题报告为发现

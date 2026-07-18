@@ -29,6 +29,8 @@ const models = args.models || {}
 
 const CHECKLIST = `${skillDir}/references/checklist.md`
 const SCHEMA_DOC = `${skillDir}/references/output-schema.md`
+const REC_DOC = `${skillDir}/references/rec-format.md`
+const EMIT = `${skillDir}/scripts/emit_json.py`
 
 const RESULT_SCHEMA = {
   type: 'object',
@@ -43,12 +45,13 @@ const RESULT_SCHEMA = {
 
 const commonRules = `
 通用纪律：
-- 先读 ${CHECKLIST}（判定标准与边界规则）和 ${SCHEMA_DOC}（输出格式），再开始审查。
+- 先读 ${CHECKLIST}（判定标准与边界规则）、${SCHEMA_DOC}（最终输出结构）和 ${REC_DOC}（.rec 落盘格式），再开始审查。
 - 只报告有证据的"存在"；证据不足直接省略，不输出 confidence 低的发现。
 - evidence 必须区分观察事实与推断；不把 lint 级样式问题当发现。
 - 同一现象按 checklist 边界规则归入最特异的一项，不重复计分。
-- 输出文件必须是 output-schema.md 定义的合法 JSON，不写叙述性总结。
-- 写完 JSON 输出文件后，立即运行 python3 ${skillDir}/scripts/repair_json.py <output_path> 做 json.load → json.dump 重写，确保内嵌 " 被转义为 \"。`
+- 不写叙述性总结；也不要手写 JSON 文件——序列化由脚本完成：
+  先把结果写成 <目标json路径去掉.json>.rec（rec-format.md 的格式：prose 字段放 <<< >>> 原文块，引号/反斜杠原样书写不转义），
+  再运行 python3 ${EMIT} <该.rec路径> 生成合法 .json；非 0 退出时按报错行号修正 .rec 重跑，直到通过才允许返回。`
 
 // ---------- Phase 2 分片审查 ----------
 phase('分片审查')
@@ -66,7 +69,7 @@ ${s.files.map(f => `- ${f}`).join('\n')}
 对每个文件中的每个类/顶层单元，逐项核对适用的检查项（存在/不存在/不适用）。同时为每个类产出结构摘要（字段表、方法签名、参数组合、条件分发点、出向依赖）——下游跨文件审查完全依赖摘要的完整性，未报 finding 的类也必须有摘要。
 ${commonRules}
 
-把结果写入 ${workspace}/findings/shard-${s.id}.json（schema 见 output-schema.md 第 1 节，agent_role 填 "shard-review"，shard_id 填 "${s.id}"，coverage.assigned 填本清单全部单元）。返回 output_path 与三个计数。`,
+经 ${workspace}/findings/shard-${s.id}.rec + emit_json.py 产出 ${workspace}/findings/shard-${s.id}.json（结构见 output-schema.md 第 1 节，agent_role 填 "shard-review"，shard_id 填 "${s.id}"，coverage.assigned 填本清单全部单元）。返回 output_path（最终 .json 路径）与三个计数。`,
   { label: `shard:${s.id}`, phase: '分片审查', schema: RESULT_SCHEMA, model: models.shard },
 )))
 
@@ -96,7 +99,7 @@ const crossResults = await parallel(CROSS_ITEMS.map(item => () => agent(
 ${commonRules}
 - finding 必须带 related[] 字段，列出构成该跨文件模式的全部位置。
 
-把结果写入 ${workspace}/findings/cross-${item.id}.json（schema 见 output-schema.md 第 2 节，agent_role 填 "cross-file-review"）。返回 output_path 与计数（reviewed_count 填聚合分析过的单元数）。`,
+经 ${workspace}/findings/cross-${item.id}.rec + emit_json.py 产出 ${workspace}/findings/cross-${item.id}.json（结构见 output-schema.md 第 2 节，agent_role 填 "cross-file-review"）。返回 output_path（最终 .json 路径）与计数（reviewed_count 填聚合分析过的单元数）。`,
   { label: `cross:${item.id}`, phase: '跨文件审查', schema: RESULT_SCHEMA, model: models.cross },
 )))
 
@@ -116,7 +119,7 @@ const rating = await agent(
 下钻规则：上限额外 10 个文件，记录在 coverage.drilldown。
 评分纪律：每项的 anchor 字段必须摘抄 ${CHECKLIST} 中该项锚点原文；CHG-02 需附一条假想变更的走查记录（walkthrough 字段）；CHG-03 附最难追踪路径的走查。评分基于证据而不是印象——引用具体文件与行为。
 
-把结果写入 ${workspace}/ratings.json（schema 见 output-schema.md 第 3 节，6 项缺一不可）。返回 output_path 与计数（findings_count 填 0，reviewed_count 填精读文件数）。`,
+经 ${workspace}/ratings.rec + emit_json.py 产出 ${workspace}/ratings.json（结构见 output-schema.md 第 3 节，6 项缺一不可）。返回 output_path（最终 .json 路径）与计数（findings_count 填 0，reviewed_count 填精读文件数）。`,
   { label: 'holistic-rating', phase: '整体评级', schema: RESULT_SCHEMA, model: models.rating },
 )
 
@@ -127,5 +130,5 @@ return {
   cross_done: crossResults.filter(Boolean).length,
   rating_done: !!rating,
   total_findings: ok.reduce((n, r) => n + (r.findings_count || 0), 0),
-  next: `先运行 python3 ${skillDir}/scripts/repair_json.py ${workspace}/findings/ ${workspace}/ratings.json 校验修复 JSON；再运行 python3 ${skillDir}/scripts/aggregate.py ${workspace} 完成 Phase 5（退出码 2 = 覆盖缺口，用 resumeFromRunId 重跑缺口分片）`,
+  next: `先运行 python3 ${skillDir}/scripts/validate_json.py ${workspace}/findings/ ${workspace}/ratings.json 做纯校验（失败 = 重派对应子代理修正其 .rec 重新 emit，不得手工修补）；再运行 python3 ${skillDir}/scripts/aggregate.py ${workspace} 完成 Phase 5（退出码 2 = 覆盖缺口，用 resumeFromRunId 重跑缺口分片）`,
 }

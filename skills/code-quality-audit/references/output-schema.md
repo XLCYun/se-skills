@@ -1,6 +1,6 @@
 # 输出 Schema
 
-所有子代理输出必须是合法 JSON。字段名、枚举值严格按本文件，`aggregate.py` 会做校验，不合法的文件整体拒收。
+本文件定义落盘 `.json` 的最终结构。**子代理不手写这些 JSON**：先按 [rec-format.md](rec-format.md) 写 `.rec` 中间格式，由 `scripts/emit_json.py` 组装、校验并序列化成本文件定义的结构。字段名、枚举值严格按本文件，`validate_json.py` / `aggregate.py` 会再次校验，不合法的文件整体拒收（重派生产者，不做启发式修复）。
 
 ## 1. 分片审查输出（Phase 2，每分片一个文件）
 
