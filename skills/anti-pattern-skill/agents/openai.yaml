@@ -1,4 +1,0 @@
-interface:
-  display_name: "反模式审查"
-  short_description: "审查软件与项目中的反模式"
-  default_prompt: "使用 $anti-pattern-skill 审查这个仓库、子系统或项目方案中的反模式，并产出结构化报告与整改待办。"
