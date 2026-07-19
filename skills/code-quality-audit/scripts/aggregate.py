@@ -21,6 +21,7 @@ DIM_BY_PREFIX = {
     "ENG": "工程判断", "TST": "测试质量",
 }
 RATING_ITEMS = {"CHG-01", "CHG-02", "CHG-03", "OVR-01", "ENG-01", "CPL-06"}
+REQUIRED_CROSS_ITEMS = {"CPL-03", "CPL-05", "DUP-02", "DUP-03", "NAM-03"}
 DEFAULT_WEIGHTS = {
     "结构": 18, "耦合": 14, "测试质量": 15, "重复": 10, "命名与领域建模": 10,
     "变更边界": 10, "配置卫生": 10, "过度设计": 5, "死代码": 4, "工程判断": 4,
@@ -46,6 +47,14 @@ def load_json(path, required=True):
             die(f"invalid JSON in {path}: {e}")
 
 
+def file_sha256(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(65536), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
 def validate_finding(f, src):
     for field in REQUIRED_FINDING_FIELDS:
         if field not in f or f[field] in (None, ""):
@@ -61,36 +70,131 @@ def validate_finding(f, src):
         die(f"{src}: '{f['item_id']}' 是 C 档评级项，不应出现在 findings 中（应在 ratings.json）")
 
 
-def coverage_audit(manifest, shard_files):
-    """核对每个分片：assigned 是否全部被 reviewed 或 skipped 覆盖。"""
+def duplicates(values):
+    seen, repeated = set(), set()
+    for value in values:
+        if value in seen:
+            repeated.add(value)
+        seen.add(value)
+    return sorted(repeated)
+
+
+def coverage_audit(manifest, shard_files, cross_files, check_cross=True):
+    """以 manifest 为唯一分母，双向核对 shard/cross coverage 与文件级 summary。"""
     shard_by_id = {s["id"]: s for s in manifest["shards"]}
     gaps, skipped_total, reviewed_total, assigned_total = [], 0, 0, 0
     seen_shards = set()
+    all_expected = [unit_id for s in manifest["shards"] for unit_id in s.get("assigned_units", [])]
+    duplicate_manifest_units = duplicates(all_expected)
+    if duplicate_manifest_units:
+        gaps.append({"kind": "duplicate_manifest_units", "unit_ids": duplicate_manifest_units})
     for path, data in shard_files:
         sid = data.get("shard_id", "?")
+        if sid in seen_shards:
+            gaps.append({"kind": "duplicate_shard_result", "shard": sid, "file": path})
+            continue
         seen_shards.add(sid)
         cov = data.get("coverage") or {}
-        assigned = set(cov.get("assigned", []))
-        reviewed = set(cov.get("reviewed", []))
-        skipped = {s["unit"] if isinstance(s, dict) else s for s in cov.get("skipped", [])}
-        if not assigned:
-            gaps.append({"shard": sid, "missing": ["<coverage.assigned 为空>"]})
+        if sid not in shard_by_id:
+            gaps.append({"kind": "unknown_shard", "shard": sid, "file": path})
             continue
-        missing = sorted(assigned - reviewed - skipped)
-        if missing:
-            gaps.append({"shard": sid, "missing": missing})
-        assigned_total += len(assigned)
+        expected_list = shard_by_id[sid].get("assigned_units", [])
+        assigned_list = cov.get("assigned", [])
+        reviewed_list = cov.get("reviewed", [])
+        skipped_list = cov.get("skipped", [])
+        skipped_ids = [s.get("unit_id") if isinstance(s, dict) else s for s in skipped_list]
+        expected, assigned, reviewed, skipped = map(set, (
+            expected_list, assigned_list, reviewed_list, skipped_ids))
+
+        detail = {
+            "kind": "shard_coverage_mismatch",
+            "shard": sid,
+            "missing_assigned": sorted(expected - assigned),
+            "extra_assigned": sorted(assigned - expected),
+            "missing_review": sorted(assigned - reviewed - skipped),
+            "extra_reviewed": sorted(reviewed - assigned),
+            "extra_skipped": sorted(skipped - assigned),
+            "reviewed_and_skipped": sorted(reviewed & skipped),
+            "duplicate_expected": duplicates(expected_list),
+            "duplicate_assigned": duplicates(assigned_list),
+            "duplicate_reviewed": duplicates(reviewed_list),
+            "duplicate_skipped": duplicates(skipped_ids),
+        }
+
+        expected_summary = set(shard_by_id[sid].get("summary_files", []))
+        summary_list = [s.get("file") for s in data.get("summary", []) if isinstance(s, dict)]
+        actual_summary = set(summary_list)
+        detail.update({
+            "missing_summaries": sorted(expected_summary - actual_summary),
+            "extra_summaries": sorted(actual_summary - expected_summary),
+            "duplicate_summaries": duplicates(summary_list),
+        })
+        if any(value for key, value in detail.items() if key not in {"kind", "shard"}):
+            gaps.append(detail)
+
+        assigned_total += len(expected_list)
         reviewed_total += len(reviewed)
         skipped_total += len(skipped)
     missing_shards = sorted(set(shard_by_id) - seen_shards)
     if missing_shards:
-        gaps.append({"shard": "<未提交结果的分片>", "missing": missing_shards})
+        gaps.append({"kind": "missing_shards", "shards": missing_shards})
+
+    if check_cross:
+        all_source_files = {
+            f["path"] for f in manifest.get("files", []) if not f.get("is_test")
+        }
+        cross_by_item = {}
+        for path, data in cross_files:
+            item = os.path.basename(path).removeprefix("cross-").removesuffix(".json")
+            if item in cross_by_item:
+                gaps.append({"kind": "duplicate_cross_result", "item": item, "file": path})
+                continue
+            cross_by_item[item] = data
+            cov = data.get("coverage") or {}
+            assigned_list = cov.get("assigned", [])
+            reviewed_list = cov.get("reviewed", [])
+            assigned, reviewed = set(assigned_list), set(reviewed_list)
+            detail = {
+                "kind": "cross_coverage_mismatch",
+                "item": item,
+                "missing_assigned": sorted(all_source_files - assigned),
+                "extra_assigned": sorted(assigned - all_source_files),
+                "missing_review": sorted(assigned - reviewed),
+                "extra_reviewed": sorted(reviewed - assigned),
+                "duplicate_assigned": duplicates(assigned_list),
+                "duplicate_reviewed": duplicates(reviewed_list),
+            }
+            if any(value for key, value in detail.items() if key not in {"kind", "item"}):
+                gaps.append(detail)
+        missing_cross = sorted(REQUIRED_CROSS_ITEMS - set(cross_by_item))
+        extra_cross = sorted(set(cross_by_item) - REQUIRED_CROSS_ITEMS)
+        if missing_cross or extra_cross:
+            gaps.append({"kind": "cross_files_mismatch", "missing": missing_cross, "extra": extra_cross})
     return {
         "assigned": assigned_total,
         "reviewed": reviewed_total,
         "skipped": skipped_total,
         "gaps": gaps,
         "pass": not gaps,
+    }
+
+
+def gap_report(coverage):
+    retry_shards, retry_cross = set(), set()
+    for gap in coverage["gaps"]:
+        if gap.get("shard") and gap.get("kind") != "unknown_shard":
+            retry_shards.add(gap["shard"])
+        retry_shards.update(gap.get("shards", []))
+        if gap.get("item"):
+            retry_cross.add(gap["item"])
+        if gap.get("kind") == "cross_files_mismatch":
+            retry_cross.update(gap.get("missing", []))
+    return {
+        "status": "failed",
+        "retryable": True,
+        "retry_shards": sorted(retry_shards),
+        "retry_cross": sorted(retry_cross),
+        "gaps": coverage["gaps"],
     }
 
 
@@ -195,6 +299,8 @@ def main():
     ap.add_argument("workspace")
     ap.add_argument("--weights", help="权重/DMAX 覆盖文件")
     ap.add_argument("--target-name", help="报告中的项目名，默认取 manifest.root 目录名")
+    ap.add_argument("--allow-degraded-tools", action="store_true",
+                    help="允许缺失工具，仅用于非正式降级审计")
     args = ap.parse_args()
     ws = args.workspace
 
@@ -202,6 +308,14 @@ def main():
     ratings_file = load_json(os.path.join(ws, "ratings.json"))
     ratings = ratings_file.get("ratings", [])
     tools_report = load_json(os.path.join(ws, "tools", "tools_report.json"), required=False)
+    ready_path = os.path.join(ws, "tools", "READY.json")
+    if not args.allow_degraded_tools:
+        ready = load_json(ready_path, required=False)
+        manifest_path = os.path.join(ws, "manifest.json")
+        if not ready or not ready.get("ready") or not ready.get("strict"):
+            die("工具门禁未通过：缺少有效 tools/READY.json；先运行 validate_tools.py")
+        if ready.get("manifest_sha256") != file_sha256(manifest_path):
+            die("工具门禁已过期：manifest.json 在 READY 生成后发生变化；重新运行工具门禁")
 
     weights, dmax = dict(DEFAULT_WEIGHTS), {}
     weights_raw = ""
@@ -214,7 +328,7 @@ def main():
     if round(sum(weights.values()), 6) != 100:
         die(f"权重合计必须为 100，当前 {sum(weights.values())}")
 
-    all_findings, shard_files = [], []
+    all_findings, shard_files, cross_files = [], [], []
     paths = sorted(glob.glob(os.path.join(ws, "findings", "*.json")))
     if not paths:
         die(f"no findings files in {ws}/findings/")
@@ -225,10 +339,16 @@ def main():
             all_findings.append(f)
         if data.get("agent_role") == "shard-review":
             shard_files.append((path, data))
+        elif data.get("agent_role") == "cross-file-review":
+            cross_files.append((path, data))
 
-    coverage = coverage_audit(manifest, shard_files)
+    coverage = coverage_audit(manifest, shard_files, cross_files)
     if not coverage["pass"]:
-        print(json.dumps(coverage["gaps"], ensure_ascii=False, indent=1))
+        report_data = gap_report(coverage)
+        gap_path = os.path.join(ws, "gap-report.json")
+        with open(gap_path, "w", encoding="utf-8") as f:
+            json.dump(report_data, f, ensure_ascii=False, indent=2)
+        print(json.dumps(report_data, ensure_ascii=False, indent=1))
         die("覆盖审计不通过：以上单元未被核对，重派缺口分片后重跑", code=2)
 
     findings, dropped = dedupe(all_findings)

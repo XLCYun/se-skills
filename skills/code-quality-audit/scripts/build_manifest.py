@@ -80,13 +80,25 @@ def extract_units(lang, text, rel_path):
         for unit_type, pat in patterns:
             for m in pat.finditer(text):
                 name = m.group(1)
-                if name in seen:
-                    continue
-                seen.add(name)
                 line = text.count("\n", 0, m.start()) + 1
-                units.append({"type": unit_type, "name": name, "line": line})
+                identity = (unit_type, name, line)
+                if identity in seen:
+                    continue
+                seen.add(identity)
+                units.append({
+                    "id": f"{rel_path}::{unit_type}::{name}@{line}",
+                    "type": unit_type,
+                    "name": name,
+                    "line": line,
+                })
     if not units:
-        units.append({"type": "file", "name": os.path.basename(rel_path), "line": 1})
+        name = os.path.basename(rel_path)
+        units.append({
+            "id": f"{rel_path}::file::{name}@1",
+            "type": "file",
+            "name": name,
+            "line": 1,
+        })
     return units
 
 
@@ -149,6 +161,8 @@ def build_shards(files, max_loc):
                 "id": f"{kind}-{start_idx + i:02d}",
                 "kind": kind,
                 "files": [f["path"] for f in s],
+                "assigned_units": [u["id"] for f in s for u in f["units"]],
+                "summary_files": [f["path"] for f in s] if kind == "src" else [],
                 "loc": sum(f["loc"] for f in s),
                 "units": sum(len(f["units"]) for f in s),
             }

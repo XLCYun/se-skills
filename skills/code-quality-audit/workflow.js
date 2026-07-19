@@ -3,7 +3,8 @@
 //   args = {
 //     workspace: "<工作区绝对路径>",          // 含 manifest.json、tools/
 //     skillDir:  "<skill 目录绝对路径>",       // 含 references/、scripts/
-//     shards:    [{id, kind, files: [...], loc, units}, ...]   // 取自 manifest.shards
+//     toolsReady: true,                         // validate_tools.py strict 门禁已通过
+//     shards:    [{id, kind, files, assigned_units, summary_files, loc, units}, ...]
 //   }
 // 后置：主循环运行 aggregate.py 完成 Phase 5；若退出码 2（覆盖缺口），
 // 用 resumeFromRunId 重跑本 workflow——未变更的 agent 调用会命中缓存，只有缺口分片重跑。
@@ -18,14 +19,23 @@ export const meta = {
   ],
 }
 
-const { workspace, skillDir, repoRoot, shards } = args
+const { workspace, skillDir, repoRoot, shards, toolsReady } = args
 if (!workspace || !skillDir || !repoRoot || !Array.isArray(shards) || shards.length === 0) {
   throw new Error('args 必须包含 workspace、skillDir、repoRoot、shards（来自 manifest.shards）')
+}
+if (toolsReady !== true) {
+  throw new Error('Phase 1 工具门禁未通过：先运行 validate_tools.py strict 并传入 toolsReady: true')
+}
+for (const shard of shards) {
+  if (!Array.isArray(shard.assigned_units) || !Array.isArray(shard.summary_files)) {
+    throw new Error(`分片 ${shard.id} 缺少 assigned_units/summary_files；必须使用新版 build_manifest.py`)
+  }
 }
 // 可选：按阶段覆盖模型（额度受限时用小模型跑机械性强的阶段），如
 // args.models = { shard: 'haiku', cross: 'sonnet', rating: 'sonnet' }；未指定则继承会话模型。
 // 额度中断恢复：已落盘的 shard-*.json 无需重跑，重新调用时从 args.shards 中剔除即可。
 const models = args.models || {}
+const sourceSummaryFiles = shards.filter(s => s.kind === 'src').flatMap(s => s.summary_files || [])
 
 const CHECKLIST = `${skillDir}/references/checklist.md`
 const SCHEMA_DOC = `${skillDir}/references/output-schema.md`
@@ -40,6 +50,14 @@ const RESULT_SCHEMA = {
     findings_count: { type: 'number' },
     reviewed_count: { type: 'number' },
     skipped_count: { type: 'number' },
+  },
+}
+const GATE_SCHEMA = {
+  type: 'object',
+  required: ['passed', 'gap_report'],
+  properties: {
+    passed: { type: 'boolean' },
+    gap_report: { type: 'string' },
   },
 }
 
@@ -66,16 +84,30 @@ const shardResults = await parallel(shards.map(s => () => agent(
 本分片（${s.id}，${s.kind === 'test' ? '测试分片：只执行 TST-01/02/03 三项，判定前先读 manifest.json 的 units 索引了解被测 API 面' : '源码分片：执行 checklist 中所有 B 档单元级项 + A 档确认'}）的必读文件清单（封闭，禁止跳过；确实读不了的记入 coverage.skipped 并给原因）：
 ${s.files.map(f => `- ${f}`).join('\n')}
 
-对每个文件中的每个类/顶层单元，逐项核对适用的检查项（存在/不存在/不适用）。同时为每个类产出结构摘要（字段表、方法签名、参数组合、条件分发点、出向依赖）——下游跨文件审查完全依赖摘要的完整性，未报 finding 的类也必须有摘要。
+本分片唯一允许写入 coverage.assigned 的 unit_id 清单（必须原样复制，不得自行增删或改名）：
+${(s.assigned_units || []).map(id => `- ${id}`).join('\n')}
+
+${s.kind === 'test'
+    ? '测试分片不生成 summary；只输出测试质量 findings 与 coverage。'
+    : `逐项核对以上单元。并且为下列每个源码文件生成且仅生成一条文件级 summary（file/language/classes/functions/param_clusters/dispatch_points/dependencies/delegations）：\n${(s.summary_files || []).map(f => `- ${f}`).join('\n')}`}
 ${commonRules}
 
-经 ${workspace}/findings/shard-${s.id}.rec + emit_json.py 产出 ${workspace}/findings/shard-${s.id}.json（结构见 output-schema.md 第 1 节，agent_role 填 "shard-review"，shard_id 填 "${s.id}"，coverage.assigned 填本清单全部单元）。返回 output_path（最终 .json 路径）与三个计数。`,
+经 ${workspace}/findings/shard-${s.id}.rec + emit_json.py 产出 ${workspace}/findings/shard-${s.id}.json（结构见 output-schema.md 第 1 节，agent_role 填 "shard-review"，shard_id 填 "${s.id}"；SKIPPED 使用 unit_id）。返回 output_path（最终 .json 路径）与三个计数。`,
   { label: `shard:${s.id}`, phase: '分片审查', schema: RESULT_SCHEMA, model: models.shard },
 )))
 
 const failedShards = shards.filter((s, i) => !shardResults[i])
 if (failedShards.length) {
   log(`警告：${failedShards.map(s => s.id).join(', ')} 未返回结果，aggregate.py 将在覆盖审计中报缺口`)
+}
+
+const shardGate = await agent(
+  `执行确定性 Phase 2 门禁：python3 ${skillDir}/scripts/validate_coverage.py ${workspace} --phase shard。
+不得修改任何 findings。退出码 0 返回 passed=true；退出码 2 返回 passed=false，并把 gap_report 填 ${workspace}/gap-report.json。`,
+  { label: 'gate:phase2', phase: '分片审查', schema: GATE_SCHEMA },
+)
+if (!shardGate || !shardGate.passed) {
+  throw new Error(`Phase 2 覆盖门禁失败；读取 ${workspace}/gap-report.json，按 retry_shards 定向重试后 resume`)
 }
 
 // ---------- Phase 3 跨文件审查 ----------
@@ -94,6 +126,9 @@ const crossResults = await parallel(CROSS_ITEMS.map(item => () => agent(
   `你是代码质量审计的跨文件专项代理，只判定一项：${item.id} ${item.name}。
 
 主输入：${workspace}/findings/ 下所有 shard-*.json 的 summary 数组（全仓结构摘要），以及 ${workspace}/manifest.json 的目录树信息。目标仓库根目录：${repoRoot}。先聚合摘要中与本项相关的信号（如 dispatch_points、param_clusters、方法签名重合、纯转发方法比例）。
+
+coverage.assigned 必须原样写入以下全部源码 summary 文件路径，coverage.reviewed 必须在逐一分析后与 assigned 完全相同：
+${sourceSummaryFiles.map(f => `- ${f}`).join('\n')}
 
 下钻规则：摘要有歧义或需要意图佐证时，允许精读源码文件与项目文档（README、设计文档），上限 10 个文件；超限时对应 finding 标 confidence: medium 并在 evidence 说明证据缺口。每次下钻记入 coverage.drilldown（路径+原因）。
 ${commonRules}
@@ -130,5 +165,5 @@ return {
   cross_done: crossResults.filter(Boolean).length,
   rating_done: !!rating,
   total_findings: ok.reduce((n, r) => n + (r.findings_count || 0), 0),
-  next: `先运行 python3 ${skillDir}/scripts/validate_json.py ${workspace}/findings/ ${workspace}/ratings.json 做纯校验（失败 = 重派对应子代理修正其 .rec 重新 emit，不得手工修补）；再运行 python3 ${skillDir}/scripts/aggregate.py ${workspace} 完成 Phase 5（退出码 2 = 覆盖缺口，用 resumeFromRunId 重跑缺口分片）`,
+  next: `先运行 python3 ${skillDir}/scripts/validate_json.py ${workspace}/findings/ ${workspace}/ratings.json；再运行 aggregate.py。退出码 2 时读取 ${workspace}/gap-report.json 的 retry_shards/retry_cross，用 resumeFromRunId 只重跑对应代理；最多重试两轮，仍失败则停止且不得生成正式报告。`,
 }

@@ -201,10 +201,14 @@ def validate_doc(doc):
             errs.append(f"{where}: 跨文件 finding 必须带 related[]（构成该模式的全部位置）")
 
     for i, s in enumerate(doc.get("summary", [])):
-        where = f"summary[{i}]({s.get('unit', '?')})"
-        for field in ("unit", "file"):
+        where = f"summary[{i}]({s.get('file', '?')})"
+        for field in ("file", "language"):
             if s.get(field) in (None, ""):
                 errs.append(f"{where}: 缺少字段 '{field}'")
+        for field in ("classes", "functions", "param_clusters", "dispatch_points",
+                      "dependencies", "delegations"):
+            if not isinstance(s.get(field), list):
+                errs.append(f"{where}: {field} 必须是数组")
 
     cov = doc.get("coverage") or {}
     for key in ("assigned", "reviewed"):
@@ -216,8 +220,8 @@ def validate_doc(doc):
         if not cov.get("assigned"):
             errs.append("coverage.assigned 不能为空（普查协议的凭证）")
     for i, s in enumerate(cov.get("skipped", [])):
-        if not (isinstance(s, dict) and s.get("unit") and s.get("reason")):
-            errs.append(f"coverage.skipped[{i}] 必须含 unit 与 reason")
+        if not (isinstance(s, dict) and s.get("unit_id") and s.get("reason")):
+            errs.append(f"coverage.skipped[{i}] 必须含 unit_id 与 reason")
     for i, d in enumerate(cov.get("drilldown", [])):
         if not (isinstance(d, dict) and d.get("path") and d.get("reason")):
             errs.append(f"coverage.drilldown[{i}] 必须含 path 与 reason")

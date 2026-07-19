@@ -49,18 +49,17 @@ refactoring <<<
 >>>
 
 === SUMMARY ===
-unit: FileService
-unit_type: class
 file: src/main/java/com/x/service/FileService.java
-nloc: 580
-fields: [{"name": "quotaCache", "type": "Map<Long,Long>", "static": false, "mutable": true}]
-methods: [{"name": "upload", "params": ["userId:Long", "file:MultipartFile", "isPublic:boolean"], "returns": "FileVO", "visibility": "public"}]
+language: java
+classes: [{"name": "FileService", "methods": ["upload"]}]
+functions: [{"name": "upload", "params": ["userId", "file"], "returns": "FileVO"}]
 param_clusters: [["userId", "fileId", "versionId"]]
 dispatch_points: [{"variable": "file.getType()", "kind": "switch", "branches": 5, "line": 210}]
 dependencies: ["UserRepository", "StorageClient", "QuotaUtil"]
+delegations: [{"from": "upload", "to": "StorageClient.put"}]
 
 === SKIPPED ===
-unit: LegacyUtil
+unit_id: src/main/java/com/x/LegacyUtil.java::class::LegacyUtil@10
 reason <<<
 文件编码损坏，无法读取
 >>>
@@ -72,8 +71,8 @@ reason <<<
 >>>
 
 === COVERAGE ===
-assigned: ["FileService", "FileController", "FileVO", "LegacyUtil"]
-reviewed: ["FileService", "FileController", "FileVO"]
+assigned: ["src/main/java/com/x/service/FileService.java::class::FileService@40", "src/main/java/com/x/LegacyUtil.java::class::LegacyUtil@10"]
+reviewed: ["src/main/java/com/x/service/FileService.java::class::FileService@40"]
 
 === END ===
 ```
@@ -82,7 +81,7 @@ reviewed: ["FileService", "FileController", "FileVO"]
 
 - 结构化子对象（`metric`、`fields`、`methods`、`related` 等，内容是标识符和数字，无引号碰撞风险）用单行 JSON 字面量；prose 用原文块——引号风险被隔离在原文块里
 - 每个 SKIPPED / DRILLDOWN 各占一个 section；无跳过/无下钻则不写
-- `COVERAGE` 的 `assigned` / `reviewed` 为单元名数组；跳过与下钻由 SKIPPED / DRILLDOWN section 组装，不要重复写在 COVERAGE 里
+- `COVERAGE` 的 `assigned` / `reviewed` 必须原样使用 manifest 的完整 unit_id；源码分片每个文件一条 SUMMARY，测试分片不写 SUMMARY
 - 跨文件文档（cross-file-review）：无 `shard_id`；FINDING 内必须有 `related: [{"file": "...", "unit": "...", "lines": [10, 20]}]`
 - 转换器会校验必填字段与枚举值（severity ∈ high|medium|low 等），报错逐条列出
 

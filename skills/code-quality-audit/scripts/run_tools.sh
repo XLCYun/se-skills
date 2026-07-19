@@ -8,6 +8,7 @@ REPO="${1:?usage: run_tools.sh <repo> <workspace>}"
 WS="${2:?usage: run_tools.sh <repo> <workspace>}"
 TOOLS_DIR="$WS/tools"
 mkdir -p "$TOOLS_DIR"
+rm -f "$TOOLS_DIR/READY.json"
 
 declare -a AVAILABLE=() MISSING=()
 
@@ -62,3 +63,7 @@ json_array() {
 
 echo "tools report -> $TOOLS_DIR/tools_report.json"
 echo "available: ${AVAILABLE[*]:-none} | missing: ${MISSING[*]:-none}"
+
+# 默认严格门禁；显式 CQA_TOOL_MODE=degraded 才允许降级继续。
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+python3 "$SCRIPT_DIR/validate_tools.py" "$WS" --mode "${CQA_TOOL_MODE:-strict}"

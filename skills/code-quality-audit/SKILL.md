@@ -35,7 +35,7 @@ Phase 5  汇总（脚本，主循环执行：去重、覆盖审计、算分、�
 python3 scripts/build_manifest.py <目标仓库路径> --out <工作区>/manifest.json
 ```
 
-产出 `manifest.json`：源文件清单（路径、语言、LOC、是否测试）、审查单元索引（类/函数）、分片方案（默认每片 ≤ 2000 LOC，测试文件独立分片）、入口点与文档清单。
+产出 `manifest.json`：源文件清单、稳定 `unit_id`（`文件::类型::名称@行号`）、每个分片的封闭 `assigned_units`、源码分片的 `summary_files`、入口点与文档清单。manifest 是覆盖审计的唯一分母。
 
 ### Phase 1 — 工具层
 
@@ -43,20 +43,20 @@ python3 scripts/build_manifest.py <目标仓库路径> --out <工作区>/manifes
 bash scripts/run_tools.sh <目标仓库路径> <工作区>
 ```
 
-按可用性运行 cloc / lizard / jscpd / semgrep，结果写入 `<工作区>/tools/`。缺失的工具记录在 `tools_report.json` 中并降级（对应 A 档项转由分片代理人工核对，置信度上限为"中"）。
+运行 cloc / lizard / jscpd / semgrep / gitleaks，结果写入 `<工作区>/tools/`，随后由 `validate_tools.py` 校验命令状态、输出存在性、可解析性及 manifest 语言是否受语法工具支持。默认 `strict`：五项全部通过且语言无缺口才生成 `tools/READY.json`，没有 READY 不得启动 Phase 2。仅显式设置 `CQA_TOOL_MODE=degraded` 才允许降级，且不得用于严格横向排名。
 
 ### Phase 2 — 分片审查（map）
 
 对 manifest 中每个分片派发一个子代理。**每个分片代理的输入**：
 
-- 该分片的必读文件清单（封闭，禁止跳过）
+- 该分片的必读文件清单与 `assigned_units`（封闭，禁止跳过、改名或自行扩充）
 - 该分片文件的工具指标摘录（lizard 复杂度、jscpd 重复块）
 - checklist.md 中的 B 档单元级项 + A 档确认协议
 
 **每个分片代理的输出**（先写 `<工作区>/findings/shard-<id>.rec`，再运行 `emit_json.py` 生成同名 `.json`；`.rec` 格式见 rec-format.md，最终 schema 见 output-schema.md）：
 
 1. `findings[]` — 逐单元核对结果，只含"存在"的项，但 `coverage.reviewed` 必须列出所有已核对单元（普查协议：对每个单元每个适用项做出 存在/不存在/不适用 判断）
-2. `summary[]` — 该分片每个类的结构摘要（字段表、方法签名、参数组合、条件分发点、出向依赖），供 Phase 3 使用
+2. `summary[]` — 源码分片对 `summary_files` 中每个文件生成且仅生成一条文件级结构摘要；测试分片不生成 summary
 3. `coverage` — 覆盖回执：assigned / reviewed / skipped（含原因）
 
 测试分片代理改用 TST-01/02/03 三项协议，输入额外包含源码 API 摘要（若 Phase 2 源码分片已完成）或 manifest 的单元索引。
@@ -95,7 +95,7 @@ python3 scripts/validate_json.py <工作区>/findings/ <工作区>/ratings.json
 python3 scripts/aggregate.py <工作区> [--weights <权重覆盖.json>]
 ```
 
-`validate_json.py` 对每个文件做 `json.loads` + 角色 schema 校验，合法文件规范化重写（`json.dump`），**不合法的文件只报错绝不猜测式修复**——只有生产者子代理拥有还原原文所需的语义知识，校验失败必须重派该子代理。aggregate.py 执行：schema 校验 → 按 `(item_id, file, unit)` 去重 → 覆盖审计（有缺口则退出码 2 并列出缺口单元，需重派后重跑）→ 计算加权发现密度 → 维度分数 → 加权总分 → 产出 `report.json` 与 `report.md`。
+`validate_json.py` 做角色 schema 校验。Phase 2 后先运行 `validate_coverage.py <工作区> --phase shard` 作为硬屏障，未通过不得启动跨文件 Agent。aggregate.py 再执行全量双向强校验：每个 shard 的 assigned 必须等于 manifest、reviewed/skipped 必须精确分割 assigned、源码文件 summary 必须一一对应、5 个 cross Agent 必须逐一覆盖全部源码 summary。失败时退出码 2 并生成 `gap-report.json`（`retry_shards`/`retry_cross`）；编排器最多定向重试两轮，仍失败则停止，不生成正式报告。
 
 ## 编排方式
 
@@ -106,6 +106,8 @@ python3 scripts/aggregate.py <工作区> [--weights <权重覆盖.json>]
 **子代理 prompt 纪律**（两种编排方式通用）：
 
 - 必读清单是封闭的：不读完不允许返回；确实无法读取的文件记入 `coverage.skipped` 并给原因
+- coverage 与 skipped 一律使用 manifest 提供的完整 `unit_id`，不得使用裸函数名/类名
+- 源码分片每个 `summary_files` 路径恰好一条 summary；测试分片 summary 必须为空
 - **不要手写 JSON 文件**（LLM 手写 JSON 迟早在引号/反斜杠/换行上产生非法文件）。先把结果写成 `<输出路径>.rec`（格式见 references/rec-format.md：prose 字段放 `<<< >>>` 原文块，任何引号原样书写，无需转义），然后运行 `python3 scripts/emit_json.py <输出路径>.rec` 生成合法 `.json`；非 0 退出时按报错行号修正 `.rec` 重跑，直到通过。序列化永远由脚本完成
 - 输出内容必须符合 output-schema.md（emit_json.py 会校验必填字段与枚举值），不写叙述性总结
 - 只报告有证据的"存在"，禁止推测性发现；证据不足时用 confidence 表达而不是省略字段
@@ -126,6 +128,7 @@ python3 scripts/aggregate.py <工作区> [--weights <权重覆盖.json>]
 - 不要让子代理手写 JSON，也不要用启发式脚本"猜修"不合法的 JSON——校验失败只能重派生产者
 - 不要把工具可计数的 A 档项交给 LLM 数数
 - 不要在覆盖审计不通过时手工放行
+- 不要在缺少 strict `tools/READY.json` 时启动 Agent 阶段
 - 不要把 lint 级样式问题报告为发现
 - 不要对同一现象在多个检查项下重复计分（边界规则见 checklist.md 每项的"边界"字段）
 - 无高置信度发现时直接说明，并报告覆盖范围

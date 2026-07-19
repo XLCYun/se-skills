@@ -28,20 +28,19 @@
   ],
   "summary": [
     {
-      "unit": "FileService",
-      "unit_type": "class",
       "file": "src/main/java/com/x/service/FileService.java",
-      "nloc": 580,
-      "fields": [{"name": "quotaCache", "type": "Map<Long,Long>", "static": false, "mutable": true}],
-      "methods": [{"name": "upload", "params": ["userId:Long", "file:MultipartFile", "isPublic:boolean"], "returns": "FileVO", "visibility": "public"}],
+      "language": "java",
+      "classes": [{"name": "FileService", "methods": ["upload"]}],
+      "functions": [{"name": "upload", "params": ["userId", "file"], "returns": "FileVO"}],
       "param_clusters": [["userId", "fileId", "versionId"]],
       "dispatch_points": [{"variable": "file.getType()", "kind": "switch", "branches": 5, "line": 210}],
-      "dependencies": ["UserRepository", "StorageClient", "QuotaUtil"]
+      "dependencies": ["UserRepository", "StorageClient", "QuotaUtil"],
+      "delegations": [{"from": "upload", "to": "StorageClient.put"}]
     }
   ],
   "coverage": {
-    "assigned": ["FileService", "FileController", "FileVO"],
-    "reviewed": ["FileService", "FileController", "FileVO"],
+    "assigned": ["src/main/java/com/x/service/FileService.java::class::FileService@40"],
+    "reviewed": ["src/main/java/com/x/service/FileService.java::class::FileService@40"],
     "skipped": [],
     "drilldown": []
   }
@@ -54,8 +53,9 @@
 - `severity` ∈ `high|medium|low`；`confidence` ∈ `high|medium`（低置信发现直接省略，不输出）
 - `evidence` 必须区分观察事实与推断；A 档确认项在 `metric` 中带工具数字
 - `unit_type` ∈ `class|function|module|file`
-- `summary` 覆盖分片内**每个类**（含未报 finding 的），Phase 3 依赖其完整性
-- `skipped` 每项 `{"unit": "...", "reason": "..."}`
+- 源码分片 `summary[].file` 必须与 manifest 的 `summary_files` 精确相等（每个源码文件一条）；测试分片 summary 为空
+- `skipped` 每项 `{"unit_id": "...", "reason": "..."}`
+- coverage 使用完整 `unit_id`，不得使用裸名称
 
 ## 2. 跨文件审查输出（Phase 3，每检查项一个文件）
 
@@ -64,6 +64,7 @@
 结构同上，另加约束：
 
 - `agent_role`: `"cross-file-review"`
+- `coverage.assigned` 与 `reviewed` 都必须列出 manifest 的全部源码文件路径，证明逐一消费所有文件 summary
 - finding 中 `related[]` 字段必填：列出构成该跨文件模式的所有位置 `[{"file": "...", "unit": "...", "lines": [..]}]`
 - `coverage.drilldown` 记录每次源码/文档精读：`{"path": "...", "reason": "摘要中 OrderDTO 与 OrderVO 字段重合度 90%，需确认是否分层约定"}`，上限 10 条
 
