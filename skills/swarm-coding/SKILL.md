@@ -12,17 +12,15 @@ description: "蜂群开发，用于快速推进大需求开发，要求先进行
 4. 使用 to-tickets skill 拆分为多个子 issue。
 5. 分析子 issues 之间的依赖关系。使用 GitHub 的 blocked by 功能标记依赖关系。
 6. 根据依赖关系，规划子 issues 开发顺序，确定可并行开发的子 issue
-7. 使用 Subagent Handoff 开发模式，尽可能并行开发多个子 issue
-8. 当所有子 issue 都完成后，创建一个主分支合回当前分支的 PR，到此开发流程结束。
-9. 由用户确认合入，合入后标记主 issue 完成，并清理 worktree 分支和工作区。
+7. 使用 Subagent Handoff 开发模式，尽可能并行开发多个子 issue。
+8. 某一 subagent 完成后，使用 code-review skill 进行代码审查，根据审查结果要求 subagent 进行修改，直到审查通过。审查通过后，创建一个合回主分支的 PR，合回主分支后标志该子 issue 已完成。
+9. 当所有子 issue 都完成后，创建一个主分支合回当前分支的 PR。等待用户确认合入，合入后标记主 issue 完成，并清理 worktree 分支和工作区。
 
 ## Subagent Handoff 开发模式
 
 1. 一个 subagent 处理一个子 issue
 2. 使用 to-spec skill 生成一份 spec 文档给 subagent
 3. 要求 subagent 使用 worktree + implement skill 进行开发，但不进行 code-review
-4. subagent 完成开发后，使用 code-review skill 进行代码审查，根据审查结果要求 subagent 进行修改
-5. subagent 审查通过后，创建一个合入主分支的 PR，合入当前分支，并标志该子 issue 已完成。
 
 ### 节奏调整
 
