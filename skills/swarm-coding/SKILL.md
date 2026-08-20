@@ -6,28 +6,28 @@ description: "蜂群开发，用于快速推进大需求开发，要求先进行
 # Swarm Coding
 
 流程如下：
-1. 使用 grill-with-docs Skill 澄清需求。确保所有必要信息都已收集。如果已经澄清，进行下一步。
-2. 使用 worktree 从当前分支创建一个分支作为主分支
-3. 使用 to-spec skill 来生成详细的规格说明，同时创建一个主 issue。
+1. 先使用 grill-with-docs Skill 澄清需求
+2. 使用 worktree 从当前分支切出一个分支作为主分支
+3. 使用 to-spec skill 生成详细的规格，同时创建一个主 issue。
 4. 使用 to-tickets skill 拆分为多个子 issue。
-5. 分析拆分的子 issue 之间的依赖关系。使用 GitHub 的 blocked by 功能来标记依赖关系。
-6. 确定子 issue 开发顺序：根据依赖关系，确定可以并行开发的子 issue，哪些需要串行开发
-7. 使用 Subagent Handoff 开发模式
-8. 当某一个开发 subagent 完成开发任务后，使用 code-review skill 进行代码审查，根据审查结果要求开发 subagent 进行修改，直到审查通过。
-9. 当某一个开发 subagent 代码审查通过后，创建一个合入主分支的 PR，检查是否有 CI/CD 阻塞，是否有冲突，如果有则尝试解决，直到成功合入当前分支，并标志该子 issue 已完成。
-10. 当所有子 issue 都完成后，创建一个主分支合回当前分支的 PR，到此开发流程结束。
-11. 提示用户 PR 已经创建完成，等待用户确认可以合入。合入后标记主 issue 为完成，并清理 worktree 分支和工作区。
+5. 分析子 issues 之间的依赖关系。使用 GitHub 的 blocked by 功能标记依赖关系。
+6. 根据依赖关系，规划子 issues 开发顺序，确定可并行开发的子 issue
+7. 使用 Subagent Handoff 开发模式，尽可能并行开发多个子 issue
+8. 当所有子 issue 都完成后，创建一个主分支合回当前分支的 PR，到此开发流程结束。
+9. 由用户确认合入，合入后标记主 issue 完成，并清理 worktree 分支和工作区。
 
 ## Subagent Handoff 开发模式
 
-1. 每个 subagent 处理一个子 issue
-2. subagent 你需要生成一份详细的 spec 给 subagent。比较复杂可以使用 to-spec skill 生成一份 spec 文档。
-3. subagent 需要使用 worktree + implement skill 的方式开发代码
+1. 一个 subagent 处理一个子 issue
+2. 使用 to-spec skill 生成一份 spec 文档给 subagent
+3. 要求 subagent 使用 worktree + implement skill 进行开发，但不进行 code-review
+4. subagent 完成开发后，使用 code-review skill 进行代码审查，根据审查结果要求 subagent 进行修改
+5. subagent 审查通过后，创建一个合入主分支的 PR，合入当前分支，并标志该子 issue 已完成。
 
 ### 节奏调整
 
 1. 每半个小时，检查是否陷入反复的修改循环，或者反复执行某类长时间操作，在不降低任务完成质量的前提下，调整推进方式。
-2. 等待 subagent 完成：如果支持 subagent 完成后主动通知主 agent，则应使用此方式；如果仅支持轮询 subagent 状态，则轮询间隔应逐步退避到 5 分钟。
+2. 等待 subagent 完成：如果支持 subagent 完成后主动通知主 agent，应使用此方式；如果仅支持轮询 subagent 状态，则轮询间隔应逐步退避到 5 分钟。
 
 ### 开发 subagent 的模型偏好
 
