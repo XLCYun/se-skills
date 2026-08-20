@@ -1,11 +1,19 @@
 # se-skill
 
-一个面向软件工程代码审查的 Skill。
+一组面向软件工程开发与代码审查的 Skills。
 
 推荐使用 npx skills 安装：
 ```shell
 npx skills add XLCYun/se-skills
 ```
+
+## swarm-coding
+
+`swarm-coding` 是一套用于快速推进大型开发需求的蜂群开发流程，仅在用户明确要求使用时触发。
+
+它会先澄清需求并生成详细规格，再将工作拆分为带有依赖关系的子 issue，据此安排串行或并行开发。每个子 issue 由独立的 subagent 在 worktree 中实现，并经过代码审查、修正、CI/CD 检查和冲突处理后合入；全部子 issue 完成后，主 issue 才会关闭。
+
+完整的执行流程、Subagent Handoff 约定与模型选择规则见 [skills/swarm-coding](skills/swarm-coding/SKILL.md)。
 
 ## code-quality-audit
 

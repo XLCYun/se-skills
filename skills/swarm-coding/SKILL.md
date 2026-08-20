@@ -19,9 +19,8 @@ description: "蜂群开发，用于快速推进大需求开发，要求先进行
 ## Subagent Handoff 开发模式
 
 1. 每个 subagent 处理一个子 issue
-2. 你至少需要告知 subagent：
-  1. subagent 有可能智力有限但执行力很强，因此你需要生成一份详细的 spec 给 subagent
-  2. subagent 需要使用 worktree + implement skill 的方式开发代码
+2. subagent 可能智力有限但执行力很强，因此你需要生成一份详细的 spec 给 subagent。如果任务比较复杂，可以使用 to-spec skill 专门为 subagent 生成一份 spec 文档。
+3. subagent 需要使用 worktree + implement skill 的方式开发代码
 
 ### Subagent 的模型与思考能力偏好
 
