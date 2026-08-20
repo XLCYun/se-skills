@@ -30,4 +30,4 @@ description: "蜂群开发，用于快速推进大需求开发，要求先进行
 
 ### goal 模式
 
-如果 goal 模式或者 ralph loop 模式可用，我们的目标就是完成所有子 issue 的开发和合入，最终标记主 issue 已完成。
+如果 goal 模式或者 ralph loop 模式可用，我们的目标就是完成所有子 issues 的开发和合入，最终标记主 issue 已完成。
