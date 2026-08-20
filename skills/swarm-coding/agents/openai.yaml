@@ -1,0 +1,4 @@
+interface:
+  display_name: "蜂群开发"
+  short_description: "澄清并拆分大型需求，协调多个子代理并行开发、审查与交付"
+  default_prompt: "使用 $swarm-coding 澄清并拆分这个大型开发需求，然后协调 subagent推进交付。"

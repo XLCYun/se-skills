@@ -1,0 +1,4 @@
+interface:
+  display_name: "代码质量审计"
+  short_description: "量化审查整个代码库，输出可复现的缺陷、覆盖率与质量评分"
+  default_prompt: "使用 $code-quality-audit 对这个代码库进行可量化、可复现的代码质量审计。"
