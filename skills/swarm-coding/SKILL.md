@@ -24,6 +24,11 @@ description: "蜂群开发，用于快速推进大需求开发，要求先进行
 2. subagent 你需要生成一份详细的 spec 给 subagent。比较复杂可以使用 to-spec skill 生成一份 spec 文档。
 3. subagent 需要使用 worktree + implement skill 的方式开发代码
 
+### 节奏调整
+
+1. 每半个小时，检查是否陷入反复的修改循环，或者反复执行某类长时间操作，在不降低任务完成质量的前提下，调整推进方式。
+2. 等待 subagent 完成：如果支持 subagent 完成后主动通知主 agent，则应使用此方式；如果仅支持轮询 subagent 状态，则轮询间隔应逐步退避到 5 分钟。
+
 ### 开发 subagent 的模型偏好
 
 1. 如果用户显式指定了要使用的模型，则使用用户指定的模型
