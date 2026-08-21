@@ -1,0 +1,4 @@
+interface:
+  display_name: "蜂王开发模式"
+  short_description: "澄清并拆分大型需求，协调雄蜂并行开发、合并与交付"
+  default_prompt: "使用 $queen-mode 澄清并拆分这个大型开发需求，协调雄蜂 subagent 完成开发与交付。"

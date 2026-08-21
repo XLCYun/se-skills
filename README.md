@@ -13,6 +13,8 @@ npx skills add XLCYun/se-skills
 
 它会先澄清需求并生成详细规格，再将工作拆分为带有依赖关系的子 issue，据此安排串行或并行开发。每个子 issue 由独立的 subagent 在 worktree 中实现，并经过代码审查、修正、CI/CD 检查和冲突处理后合入；全部子 issue 完成后，主 issue 才会关闭。
 
+蜂群内部使用三个角色 skill：`queen-mode` 负责澄清、拆分和统筹交付，`drone-mode` 负责协调单个子 issue，`worker-mode` 负责实现具体的 issue 分片。它们由 `swarm-coding` 按角色自动引用，不作为直接使用的入口。
+
 完整的执行流程、Subagent Handoff 约定与模型选择规则见 [skills/swarm-coding](skills/swarm-coding/SKILL.md)。
 
 ## code-quality-audit
