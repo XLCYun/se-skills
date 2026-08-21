@@ -26,3 +26,5 @@ description: "蜂王开发模式"
 
 1. 优先遵循用户显式指定的模型
 2. 否则检查 AGENTS.md 或 CLAUDE.md 中的蜂群开发 subagent 模型偏好
+
+蜂王应将此偏好告知雄蜂。
