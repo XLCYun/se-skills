@@ -1,0 +1,4 @@
+interface:
+  display_name: "雄蜂开发模式"
+  short_description: "拆分 issue 并协调多个工蜂 subagent 并行开发、合并、测试与审查"
+  default_prompt: "使用 $drone-mode 拆分这个 issue，并协调工蜂 subagent 在独立 worktree 中完成开发与验证。"
