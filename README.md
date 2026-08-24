@@ -17,6 +17,14 @@ npx skills add XLCYun/se-skills
 
 完整的执行流程、Subagent Handoff 约定与模型选择规则见 [skills/swarm-coding](skills/swarm-coding/SKILL.md)。
 
+## hive-sentinel
+
+`hive-sentinel`（哨蜂）是蜂群开发的轻量会话分析角色。蜂王可以把一组 Codex、Claude Code 或其他 agent runtime 的会话及其关系交给哨蜂；哨蜂使用只读脚本计算耗时、活动、工具、并发和 token 等事实，再自由分析并返回优化建议与候选长期经验。
+
+它直接读取 runtime 已落盘的会话记录，不要求额外埋点，也不部署常驻可观测性服务。脚本默认只向 stdout 输出，不在项目工作区保留中间数据。
+
+完整工作方式见 [skills/hive-sentinel](skills/hive-sentinel/SKILL.md)。
+
 ## code-quality-audit
 
 `code-quality-audit` 将原来的 `bad-smells-skill` 与 `anti-pattern-skill` 合并为一套可量化、可审计的代码质量审查流程。
