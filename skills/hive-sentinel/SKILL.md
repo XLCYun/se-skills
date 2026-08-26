@@ -16,6 +16,11 @@ description: 分析 Codex、Claude Code 或其他 agent runtime 已落盘的会�
 - 调用者提供的 agent 角色和父子关系；
 - 本次要调查的问题或优化关注点。
 
+我们只关注以下问题和优化点，报告也只报告此类问题：
+1. 各会话的大部分时间消耗在哪里
+2. 是否存在不合理的卡点导致会话时间过长
+3. 如何优化 agent 的性能耗时
+
 ## 分析已支持的 Runtime
 
 对 Codex 和 Claude Code 会话使用 `scripts/session_tools.py`。需要查看精确参数时，运行 `--help` 或子命令的 `--help`。
@@ -26,11 +31,9 @@ description: 分析 Codex、Claude Code 或其他 agent runtime 已落盘的会�
 4. 明确区分从数据中观察到的活动类型，以及根据上下文推断的工作流阶段。
 5. 自由组织最终报告。当分析结果足以支持时，加入优化建议和候选长期经验。
 
-CLI 将 JSON 输出到 stdout。除非调用者显式指定输出重定向，否则不写入文件。
-
 ## 探索其他 Runtime
 
-当 runtime 没有专用 adapter 时，根据调用者的自然语言说明和当前可用工具定位它的会话记录，使用 shell 或小型临时脚本完成筛选和计算。
+根据调用者的自然语言说明和当前可用工具定位它的会话记录，使用 shell 或小型临时脚本完成筛选和计算。
 
 ## 交付
 
