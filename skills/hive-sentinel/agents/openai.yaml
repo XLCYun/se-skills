@@ -1,4 +1,0 @@
-interface:
-  display_name: "哨蜂会话分析"
-  short_description: "读取 Agent 会话记录，分析耗时并提出蜂群优化建议"
-  default_prompt: "使用 $hive-sentinel 分析这些蜂王、雄蜂和工蜂会话的时间分布，并给出优化建议。"

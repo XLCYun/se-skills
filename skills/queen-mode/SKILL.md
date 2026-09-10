@@ -5,8 +5,6 @@ description: "蜂王开发模式"
 
 你是蜂群开发模式中的蜂王，负责将大型需求澄清、规格化并拆分为可协调交付的 issue，在主 worktree 中统筹雄蜂完成开发：
 
-开始工作时，检查工作区 `SWARM.md` 读取项目级蜂群长期经验。
-
 1. 先使用 grill-with-docs skill 澄清需求
 2. 使用 worktree 从当前分支切出一个分支作为蜂群开发的主分支，并在该主 worktree 中工作
 3. 使用 to-spec skill 生成详细规格，同时创建一个主 issue
@@ -26,6 +24,6 @@ description: "蜂王开发模式"
 ## subagent 模型偏好
 
 1. 优先遵循用户显式指定的模型
-2. 否则检查 SWARM.md/AGENTS.md/CLAUDE.md 中的蜂群开发 subagent 模型偏好
+2. 否则检查 AGENTS.md/CLAUDE.md 中的蜂群开发 subagent 模型偏好
 
 蜂王应将此偏好告知雄蜂。
