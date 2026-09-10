@@ -12,6 +12,5 @@ description: "蜂群开发，用于快速推进大需求开发，要求先进行
 1. 蜂王：当前 agent，使用 queen-mode skill，在主 worktree 中澄清需求、拆分 issue、规划依赖并协调交付
 2. 雄蜂：蜂王的 subagent，每个雄蜂负责一个子 issue，使用 drone-mode skill 协调工蜂完成 issue 分片
 3. 工蜂：雄蜂的 subagent，每个工蜂负责一个 issue 分片，使用 worker-mode skill 在独立 worktree 中开发
-4. 哨蜂：蜂王按需启动的独立 subagent，使用 hive-sentinel skill 只读分析蜂群会话，为蜂王提供耗时发现、优化建议和候选长期经验
 
-queen-mode 是后续流程的唯一来源；需求澄清、issue 拆分、依赖编排、雄蜂派发、哨蜂触发、PR 合并与清理均按该 skill 执行。当前只有蜂王可以启动哨蜂。
+queen-mode 是后续流程的唯一来源；需求澄清、issue 拆分、依赖编排、雄蜂派发、PR 合并与清理均按该 skill 执行。
